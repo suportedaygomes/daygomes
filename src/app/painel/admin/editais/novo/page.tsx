@@ -1,0 +1,22 @@
+import { redirect } from "next/navigation";
+import { CreateEditalForm } from "@/components/editais/create-edital-form";
+import { getCurrentProfile } from "@/lib/auth/profile";
+
+export const dynamic = "force-dynamic";
+
+export default async function NovoEditalPage() {
+  const { profile } = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") redirect("/painel");
+
+  return (
+    <section className="max-w-3xl">
+      <h1 className="text-3xl font-semibold tracking-tight">Novo edital</h1>
+      <p className="mt-2 text-muted">
+        Defina cargos, quantidade de vagas e as fases com prazo de envio.
+      </p>
+      <div className="mt-8">
+        <CreateEditalForm />
+      </div>
+    </section>
+  );
+}
