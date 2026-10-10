@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getR2SignedDownloadUrl } from "@/lib/r2/storage";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -41,6 +42,14 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (!canAccess) {
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
+  }
+
+  if (submission.storage_path.startsWith("submissions/")) {
+    const signed = await getR2SignedDownloadUrl(submission.storage_path, 120);
+    if (!signed.ok) {
+      return NextResponse.json({ error: signed.error }, { status: 404 });
+    }
+    return NextResponse.redirect(signed.url);
   }
 
   const { data, error } = await supabase.storage

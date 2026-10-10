@@ -28,13 +28,20 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isLogin = pathname === "/login";
+  const isPublicAuthRoute =
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname.startsWith("/auth/");
 
-  if (!user && !isLogin) {
+  if (!user && !isPublicAuthRoute) {
     return redirectWithCookies(request, "/login", supabaseResponse);
   }
 
-  if (user && isLogin) {
+  if (user && pathname === "/login") {
+    return redirectWithCookies(request, "/painel", supabaseResponse);
+  }
+
+  if (user && pathname === "/login/recuperar") {
     return redirectWithCookies(request, "/painel", supabaseResponse);
   }
 

@@ -107,43 +107,26 @@ export function ProfileSettingsForm({
     }
 
     setPendingAvatar(true);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
-      setAvatarError("Sessão expirada. Entre novamente.");
+    const formData = new FormData();
+    formData.set("file", file);
+
+    const response = await fetch("/api/profile/avatar", {
+      method: "POST",
+      body: formData,
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { ok?: boolean; avatarUrl?: string; error?: string }
+      | null;
+
+    if (!response.ok || !payload?.ok || !payload.avatarUrl) {
+      setAvatarError(payload?.error ?? "Não foi possível enviar a foto.");
       setPendingAvatar(false);
       return;
     }
 
-    const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const path = `${user.id}/avatar.${extension}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true, contentType: file.type });
-
-    if (uploadError) {
-      setAvatarError("Não foi possível enviar a foto.");
-      setPendingAvatar(false);
-      return;
-    }
-
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ avatar_path: path, updated_at: new Date().toISOString() })
-      .eq("id", user.id);
-
-    if (profileError) {
-      setAvatarError("Foto enviada, mas o perfil não foi atualizado.");
-      setPendingAvatar(false);
-      return;
-    }
-
-    const publicUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
-    setPreview(publicUrl);
+    setPreview(payload.avatarUrl);
     setAvatarMessage("Foto de perfil atualizada.");
     setPendingAvatar(false);
   }

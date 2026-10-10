@@ -8,6 +8,7 @@ import {
   isUserRole,
   type UserRole,
 } from "@/lib/roles";
+import { sendAccessEmail } from "@/lib/email/send-access-email";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CreateUserInput = {
@@ -92,9 +93,20 @@ export async function createUserAsAdmin(input: CreateUserInput) {
     return { ok: false, message: "Não foi possível salvar o perfil do usuário." };
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const emailResult = await sendAccessEmail({
+    to: email,
+    fullName,
+    loginUrl: `${siteUrl}/login`,
+    password: DEFAULT_USER_PASSWORD,
+    source: "admin",
+  });
+
   revalidatePath("/painel/admin/usuarios");
   return {
     ok: true,
-    message: `Usuário criado. Senha inicial: ${DEFAULT_USER_PASSWORD}`,
+    message: emailResult.ok
+      ? `Usuário criado. E-mail de acesso enviado para ${email}.`
+      : `Usuário criado, mas o e-mail não foi enviado (${emailResult.error}). Senha inicial: ${DEFAULT_USER_PASSWORD}`,
   };
 }

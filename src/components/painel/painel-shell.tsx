@@ -35,6 +35,7 @@ export function PainelShell({
               alt=""
               width={56}
               height={56}
+              unoptimized
               className="h-12 w-12 rounded-2xl object-cover sm:h-14 sm:w-14"
             />
           ) : (

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -128,6 +129,12 @@ export function LoginForm() {
         >
           {pending ? "Entrando..." : "Entrar"}
         </button>
+
+        <p className="text-center text-sm text-muted">
+          <Link href="/login/recuperar" className="text-purple-light hover:underline">
+            Esqueci minha senha
+          </Link>
+        </p>
 
         <InstallPrompt />
       </form>

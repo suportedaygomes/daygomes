@@ -35,12 +35,23 @@ export async function getCurrentProfile() {
   };
 }
 
+const LEGACY_AVATAR_PATH = /^[0-9a-f-]{36}\/avatar\./i;
+
 export function getAvatarPublicUrl(
   supabaseUrl: string,
   avatarPath: string | null | undefined,
 ) {
   if (!avatarPath) return null;
-  return `${supabaseUrl}/storage/v1/object/public/avatars/${avatarPath}`;
+
+  if (avatarPath.startsWith("avatars/")) {
+    return `/api/files/avatar?key=${encodeURIComponent(avatarPath)}`;
+  }
+
+  if (LEGACY_AVATAR_PATH.test(avatarPath)) {
+    return `${supabaseUrl}/storage/v1/object/public/avatars/${avatarPath}`;
+  }
+
+  return `/api/files/avatar?key=${encodeURIComponent(avatarPath)}`;
 }
 
 export function getDisplayName(user: User, profile: ProfileRow | null) {

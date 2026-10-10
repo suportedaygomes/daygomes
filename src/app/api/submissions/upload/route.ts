@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { compressSubmissionFile } from "@/lib/files/compress-submission";
+import { isR2Configured } from "@/lib/r2/config";
+import { deleteR2Object, putR2Object, submissionObjectKey } from "@/lib/r2/storage";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -74,16 +76,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: compressed.error }, { status: 400 });
   }
 
-  const storagePath = `${user.id}/${enrollmentId}/${phaseId}.${compressed.extension}`;
+  if (!isR2Configured()) {
+    return NextResponse.json({ error: "Armazenamento não configurado." }, { status: 503 });
+  }
 
-  const { error: uploadError } = await supabase.storage
-    .from("submissions")
-    .upload(storagePath, compressed.buffer, {
-      contentType: compressed.mimeType,
-      upsert: false,
-    });
+  const storagePath = submissionObjectKey(
+    user.id,
+    enrollmentId,
+    phaseId,
+    compressed.extension,
+  );
 
-  if (uploadError) {
+  const upload = await putR2Object({
+    key: storagePath,
+    body: compressed.buffer,
+    contentType: compressed.mimeType,
+  });
+
+  if (!upload.ok) {
     return NextResponse.json({ error: "Falha ao enviar o arquivo." }, { status: 500 });
   }
 
@@ -99,7 +109,7 @@ export async function POST(request: Request) {
   });
 
   if (insertError) {
-    await supabase.storage.from("submissions").remove([storagePath]);
+    await deleteR2Object(storagePath).catch(() => undefined);
     return NextResponse.json({ error: "Não foi possível registrar o envio." }, { status: 500 });
   }
 
