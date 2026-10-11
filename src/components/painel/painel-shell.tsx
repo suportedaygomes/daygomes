@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LogoutButton } from "@/components/logout-button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { PainelNav } from "@/components/painel/painel-nav";
 import {
   getAvatarPublicUrl,
   getDisplayName,
@@ -26,70 +28,46 @@ export function PainelShell({
   const displayName = getDisplayName(user, profile);
 
   return (
-    <main className="safe-screen mx-auto flex min-h-dvh w-full max-w-5xl flex-col">
-      <header className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-        <div className="flex min-w-0 items-center gap-3">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt=""
-              width={56}
-              height={56}
-              unoptimized
-              className="h-12 w-12 rounded-2xl object-cover sm:h-14 sm:w-14"
-            />
-          ) : (
-            <Image
-              src="/icons/icon-192.png"
-              alt=""
-              width={192}
-              height={192}
-              className="h-12 w-12 rounded-2xl sm:h-14 sm:w-14"
-            />
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold sm:text-base">{displayName}</p>
-            <p className="truncate text-xs text-muted sm:text-sm">
-              {ROLE_LABELS[profile.role]}
-            </p>
+    <main className="safe-screen mx-auto flex min-h-dvh w-full max-w-6xl flex-col">
+      <header className="border-b border-[color:var(--border-subtle)] py-3">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <PainelNav role={profile.role} />
+
+          <div className="flex shrink-0 items-center gap-2 border-l border-[color:var(--border-subtle)] pl-3 sm:gap-3 sm:pl-4">
+            <ThemeToggle variant="icon" />
+            <Link
+              href="/painel/perfil"
+              className="flex min-w-0 max-w-[9rem] items-center gap-2 rounded-lg border border-transparent py-1 transition hover:border-white/10 hover:bg-white/5 sm:max-w-[11rem] sm:gap-2.5"
+            >
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt=""
+                  width={40}
+                  height={40}
+                  unoptimized
+                  className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/15"
+                />
+              ) : (
+                <Image
+                  src="/icons/icon-192.png"
+                  alt=""
+                  width={40}
+                  height={40}
+                  className="h-9 w-9 shrink-0 rounded-full ring-1 ring-white/15"
+                />
+              )}
+              <div className="min-w-0 hidden text-left md:block">
+                <p className="truncate text-sm font-medium leading-tight">{displayName}</p>
+                <p className="truncate text-[11px] text-muted">{ROLE_LABELS[profile.role]}</p>
+              </div>
+            </Link>
+            <LogoutButton />
           </div>
         </div>
-        <LogoutButton />
       </header>
 
-      <nav
-        className="mt-4 flex flex-wrap gap-2"
-        aria-label="Navegação do painel"
-      >
-        <NavLink href="/painel">Início</NavLink>
-        <NavLink href="/painel/perfil">Meu perfil</NavLink>
-        {profile.role === "membro" ? (
-          <NavLink href="/painel/editais">Meus editais</NavLink>
-        ) : null}
-        {profile.role === "corretor" || profile.role === "admin" ? (
-          <NavLink href="/painel/correcoes">Correções</NavLink>
-        ) : null}
-        {profile.role === "admin" ? (
-          <>
-            <NavLink href="/painel/admin/usuarios">Usuários</NavLink>
-            <NavLink href="/painel/admin/editais">Editais</NavLink>
-            <NavLink href="/painel/admin/kiwify">Kiwify</NavLink>
-          </>
-        ) : null}
-      </nav>
-
-      <div className="mt-8 flex-1 pb-8">{children}</div>
+      <div className="mt-6 w-full flex-1 pb-8 sm:mt-8">{children}</div>
     </main>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-full border border-white/12 px-4 py-2 text-sm font-medium text-foreground transition hover:border-purple/50 hover:bg-white/5"
-    >
-      {children}
-    </Link>
   );
 }

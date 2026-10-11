@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { updateBirthDate } from "@/app/actions/profile";
+import { updateBirthDate, updateProfileBio, updateWhatsapp } from "@/app/actions/profile";
+import { formatWhatsappDisplay } from "@/lib/support/validate";
 import { createClient } from "@/lib/supabase/client";
 import { formatCpf } from "@/lib/cpf";
 import { ROLE_LABELS, type UserRole } from "@/lib/roles";
@@ -12,6 +13,8 @@ type ProfileSettingsFormProps = {
   cpf: string | null;
   role: UserRole;
   birthDate: string | null;
+  whatsapp: string | null;
+  bio: string | null;
   avatarUrl: string | null;
 };
 
@@ -21,9 +24,14 @@ export function ProfileSettingsForm({
   cpf,
   role,
   birthDate,
+  whatsapp,
+  bio,
   avatarUrl,
 }: ProfileSettingsFormProps) {
+  const isMember = role === "membro";
+  const isStaff = role === "corretor" || role === "admin";
   const [birthDateValue, setBirthDateValue] = useState(birthDate ?? "");
+  const [whatsappValue, setWhatsappValue] = useState(whatsapp ? formatWhatsappDisplay(whatsapp) : "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [birthMessage, setBirthMessage] = useState("");
@@ -32,6 +40,13 @@ export function ProfileSettingsForm({
   const [passwordError, setPasswordError] = useState("");
   const [avatarMessage, setAvatarMessage] = useState("");
   const [avatarError, setAvatarError] = useState("");
+  const [whatsappMessage, setWhatsappMessage] = useState("");
+  const [whatsappError, setWhatsappError] = useState("");
+  const [bioValue, setBioValue] = useState(bio ?? "");
+  const [bioMessage, setBioMessage] = useState("");
+  const [bioError, setBioError] = useState("");
+  const [pendingBio, setPendingBio] = useState(false);
+  const [pendingWhatsapp, setPendingWhatsapp] = useState(false);
   const [pendingBirth, setPendingBirth] = useState(false);
   const [pendingPassword, setPendingPassword] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState(false);
@@ -41,6 +56,36 @@ export function ProfileSettingsForm({
     () => (cpf ? formatCpf(cpf) : "Não informado"),
     [cpf],
   );
+
+  async function onBioSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBioError("");
+    setBioMessage("");
+    setPendingBio(true);
+
+    const result = await updateProfileBio(bioValue);
+    if (!result.ok) {
+      setBioError(result.message);
+    } else {
+      setBioMessage(result.message);
+    }
+    setPendingBio(false);
+  }
+
+  async function onWhatsappSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWhatsappError("");
+    setWhatsappMessage("");
+    setPendingWhatsapp(true);
+
+    const result = await updateWhatsapp(whatsappValue);
+    if (!result.ok) {
+      setWhatsappError(result.message);
+    } else {
+      setWhatsappMessage(result.message);
+    }
+    setPendingWhatsapp(false);
+  }
 
   async function onBirthSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,10 +177,11 @@ export function ProfileSettingsForm({
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="panel-card">
+    <div className="flex flex-col gap-6 lg:gap-8">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <section className="panel-card h-full">
         <h2 className="panel-title">Dados da conta</h2>
-        <dl className="mt-4 grid gap-3 text-sm">
+        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-muted">Nome</dt>
             <dd className="font-medium">{fullName}</dd>
@@ -157,6 +203,11 @@ export function ProfileSettingsForm({
 
       <section className="panel-card">
         <h2 className="panel-title">Foto de perfil</h2>
+        {isStaff ? (
+          <p className="mt-2 text-sm text-muted">
+            Sua foto aparece na correção e na página &quot;Corretores&quot; do painel dos alunos.
+          </p>
+        ) : null}
         <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -184,9 +235,71 @@ export function ProfileSettingsForm({
         {avatarError ? <p role="alert" className="alert-error mt-3">{avatarError}</p> : null}
         {avatarMessage ? <p role="status" className="alert-success mt-3">{avatarMessage}</p> : null}
       </section>
+      </div>
 
-      <section className="panel-card">
+      {isStaff ? (
+        <section className="panel-card">
+          <h2 className="panel-title">Apresentação profissional</h2>
+          <p className="mt-2 text-sm text-muted">
+            Formação, experiência e especialidades. Os alunos veem isso na correção e em
+            Corretores.
+          </p>
+          <form onSubmit={onBioSubmit} className="mt-4 flex flex-col gap-4">
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Sobre você
+              <textarea
+                className="field-input min-h-36 resize-y py-3"
+                value={bioValue}
+                onChange={(event) => setBioValue(event.target.value)}
+                placeholder="Ex.: Pedagoga, especialista em redação para concursos há 10 anos..."
+                maxLength={2000}
+              />
+            </label>
+            <p className="text-xs text-muted">{bioValue.length}/2000 caracteres</p>
+            {bioError ? <p role="alert" className="alert-error">{bioError}</p> : null}
+            {bioMessage ? <p role="status" className="alert-success">{bioMessage}</p> : null}
+            <button type="submit" disabled={pendingBio} className="btn-primary btn-sm w-fit">
+              {pendingBio ? "Salvando..." : "Salvar apresentação"}
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      {isMember ? (
+      <section className="panel-card h-full">
+        <h2 className="panel-title">WhatsApp</h2>
+        <p className="mt-2 text-sm text-muted">
+          Usado no suporte e para contato da equipe sobre seus envios.
+        </p>
+        <form onSubmit={onWhatsappSubmit} className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end">
+          <label className="flex flex-1 flex-col gap-2 text-sm font-medium">
+            Número com DDD
+            <input
+              type="tel"
+              value={whatsappValue}
+              onChange={(event) => setWhatsappValue(event.target.value)}
+              className="field-input"
+              placeholder="(11) 99999-9999"
+            />
+          </label>
+          <button type="submit" disabled={pendingWhatsapp} className="btn-primary sm:min-w-40">
+            {pendingWhatsapp ? "Salvando..." : "Salvar WhatsApp"}
+          </button>
+        </form>
+        {whatsappError ? <p role="alert" className="alert-error mt-3">{whatsappError}</p> : null}
+        {whatsappMessage ? <p role="status" className="alert-success mt-3">{whatsappMessage}</p> : null}
+      </section>
+      ) : null}
+
+      {(isMember || isStaff) ? (
+      <section className="panel-card h-full">
         <h2 className="panel-title">Data de nascimento</h2>
+        {isStaff ? (
+          <p className="mt-2 text-sm text-muted">
+            Usada para exibir sua idade na página Corretores (visível só para alunos).
+          </p>
+        ) : null}
         <form onSubmit={onBirthSubmit} className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end">
           <label className="flex flex-1 flex-col gap-2 text-sm font-medium">
             Data
@@ -204,10 +317,12 @@ export function ProfileSettingsForm({
         {birthError ? <p role="alert" className="alert-error mt-3">{birthError}</p> : null}
         {birthMessage ? <p role="status" className="alert-success mt-3">{birthMessage}</p> : null}
       </section>
+      ) : null}
 
-      <section className="panel-card">
+      <section className={`panel-card h-full ${isStaff && !isMember ? "" : "lg:col-span-2"}`}>
         <h2 className="panel-title">Alterar senha</h2>
         <form onSubmit={onPasswordSubmit} className="mt-4 flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm font-medium">
             Nova senha
             <input
@@ -232,13 +347,15 @@ export function ProfileSettingsForm({
               required
             />
           </label>
+          </div>
           {passwordError ? <p role="alert" className="alert-error">{passwordError}</p> : null}
           {passwordMessage ? <p role="status" className="alert-success">{passwordMessage}</p> : null}
-          <button type="submit" disabled={pendingPassword} className="btn-primary">
+          <button type="submit" disabled={pendingPassword} className="btn-primary w-fit">
             {pendingPassword ? "Salvando..." : "Atualizar senha"}
           </button>
         </form>
       </section>
+      </div>
     </div>
   );
 }

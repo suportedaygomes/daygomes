@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { EnrollMemberForm } from "@/components/editais/enroll-member-form";
+import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,7 +47,7 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
     .eq("edital_id", id);
 
   return (
-    <section className="flex flex-col gap-10">
+    <PainelPage gap="lg">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">{edital.title}</h1>
         <p className="mt-2 text-muted">Cargos, fases e membros vinculados.</p>
@@ -109,6 +110,6 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
           ) : null}
         </div>
       </section>
-    </section>
+    </PainelPage>
   );
 }

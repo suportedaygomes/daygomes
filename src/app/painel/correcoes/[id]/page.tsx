@@ -1,6 +1,13 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CorrectionForm } from "@/components/editais/correction-form";
+import { MemberContactCard } from "@/components/painel/member-contact-card";
+import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { loadCorrectionSubmissionForStaff } from "@/lib/corrector/load-correction-submission";
+import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
+import { getStaffMemberContact } from "@/lib/members/staff-member-profile";
+import { correctionWhatsAppMessage } from "@/lib/support/whatsapp";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -15,15 +22,37 @@ export default async function CorrecaoDetailPage({
     redirect("/painel");
   }
 
+  const access = await loadCorrectionSubmissionForStaff(id, profile);
+  if (!access.ok) {
+    if (access.code === "locked") {
+      return (
+        <PainelPage>
+          <h1 className="text-3xl font-semibold tracking-tight">Atividade em uso</h1>
+          <p className="mt-3 text-muted">
+            Outro corretor já está corrigindo esta atividade. Ela só volta para a fila geral
+            se for devolvida.
+          </p>
+          <Link href="/painel/correcoes" className="btn-primary btn-sm mt-6 inline-flex">
+            Voltar às correções
+          </Link>
+        </PainelPage>
+      );
+    }
+    redirect("/painel/correcoes");
+  }
+
   const supabase = await createClient();
   const { data: submission } = await supabase
     .from("phase_submissions")
-    .select("id, profiles(full_name), edital_phases(title)")
+    .select(`id, member_id, ${submissionMemberProfileEmbed}, edital_phases(title)`)
     .eq("id", id)
     .maybeSingle();
 
   if (!submission) redirect("/painel/correcoes");
 
+  const memberContact = profile
+    ? await getStaffMemberContact(submission.member_id, profile)
+    : null;
   const member = Array.isArray(submission.profiles)
     ? submission.profiles[0]
     : submission.profiles;
@@ -33,14 +62,31 @@ export default async function CorrecaoDetailPage({
 
   const { data: correction } = await supabase
     .from("phase_corrections")
-    .select("grade, feedback, errors_notes, next_phase_unlocked")
+    .select("grade, feedback, errors_notes, next_phase_unlocked, allow_resubmit")
     .eq("submission_id", id)
     .maybeSingle();
 
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(
+    /\/$/,
+    "",
+  );
+  const correctionUrl = `${siteUrl}/painel/editais/correcao/${id}`;
+  const whatsappMessage = correctionWhatsAppMessage({
+    submissionId: id,
+    correctionUrl,
+  });
+
   return (
-    <section className="max-w-2xl">
+    <PainelPage>
       <h1 className="text-3xl font-semibold tracking-tight">Corrigir envio</h1>
-      <div className="mt-8">
+      {memberContact ? (
+        <MemberContactCard
+          member={memberContact}
+          compact
+          whatsappMessage={whatsappMessage}
+        />
+      ) : null}
+      <div>
         <CorrectionForm
           submissionId={id}
           memberName={member?.full_name ?? "Aluno"}
@@ -53,11 +99,13 @@ export default async function CorrecaoDetailPage({
                   feedback: correction.feedback,
                   errorsNotes: correction.errors_notes,
                   nextPhaseUnlocked: correction.next_phase_unlocked,
+                  allowResubmit: correction.allow_resubmit,
                 }
               : undefined
           }
+          canReturnToQueue={access.canReturnToQueue}
         />
       </div>
-    </section>
+    </PainelPage>
   );
 }

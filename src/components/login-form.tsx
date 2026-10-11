@@ -136,6 +136,12 @@ export function LoginForm() {
           </Link>
         </p>
 
+        <p className="text-center text-sm text-muted">
+          <Link href="/suporte" className="text-purple-light hover:underline">
+            Precisa de ajuda? Suporte
+          </Link>
+        </p>
+
         <InstallPrompt />
       </form>
     </div>

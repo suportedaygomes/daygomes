@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,7 +17,7 @@ export default async function AdminEditaisPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <section>
+    <PainelPage gap="lg">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Editais</h1>
@@ -45,6 +46,6 @@ export default async function AdminEditaisPage() {
           <p className="text-sm text-muted">Nenhum edital cadastrado ainda.</p>
         ) : null}
       </div>
-    </section>
+    </PainelPage>
   );
 }

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { CorrectorPublicInline } from "@/components/editais/corrector-public-inline";
+import { MembroCorrecaoCardActions } from "@/components/editais/membro-correcao-actions";
+
+type SubmissionStatus = "enviado" | "em_correcao" | "corrigido" | null;
 
 type MemberPhaseCardProps = {
   enrollmentId: string;
@@ -9,11 +13,18 @@ type MemberPhaseCardProps = {
   title: string;
   description: string;
   deadlineAt: string;
-  submitted: boolean;
+  submissionStatus: SubmissionStatus;
+  submissionId: string | null;
+  allowResubmit: boolean;
   correction?: {
     grade: number | null;
     feedback: string;
     errorsNotes: string;
+  } | null;
+  corrector?: {
+    fullName: string;
+    avatarUrl: string | null;
+    bio: string | null;
   } | null;
 };
 
@@ -24,8 +35,11 @@ export function MemberPhaseCard({
   title,
   description,
   deadlineAt,
-  submitted,
+  submissionStatus,
+  submissionId,
+  allowResubmit,
   correction,
+  corrector,
 }: MemberPhaseCardProps) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -34,9 +48,18 @@ export function MemberPhaseCard({
 
   const deadline = new Date(deadlineAt);
   const expired = deadline < new Date();
+  const awaitingCorrection =
+    submissionStatus === "enviado" || submissionStatus === "em_correcao";
+  const canUpload =
+    !expired &&
+    (!submissionStatus || (submissionStatus === "corrigido" && allowResubmit));
+  const showCorrection =
+    correction &&
+    !awaitingCorrection &&
+    (submissionStatus === "corrigido" || correction.grade != null);
 
   async function onUpload() {
-    if (!file || submitted || expired) return;
+    if (!file || !canUpload) return;
     setError("");
     setMessage("");
     setPending(true);
@@ -75,41 +98,70 @@ export function MemberPhaseCard({
       <h3 className="text-lg font-semibold">{title}</h3>
       <p className="text-sm leading-6 text-muted">{description}</p>
 
-      {submitted ? (
-        <p className="text-sm text-beige">Atividade enviada. Aguarde a correção.</p>
-      ) : expired ? (
+      {awaitingCorrection ? (
+        <p className="text-sm text-beige">
+          Atividade enviada. Esta fase fica bloqueada até o corretor publicar a correção.
+        </p>
+      ) : expired && !submissionStatus ? (
         <p className="text-sm text-red-300">Prazo encerrado.</p>
-      ) : (
+      ) : canUpload ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="btn-secondary cursor-pointer">
+          {allowResubmit ? (
+            <p className="text-sm text-beige sm:basis-full">
+              Reenvio liberado pelo corretor. Envie a atividade novamente nesta fase.
+            </p>
+          ) : null}
+          <label className="btn-secondary btn-sm w-full cursor-pointer sm:w-auto">
             Escolher arquivo
             <input
               type="file"
               className="sr-only"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setError("");
+              }}
             />
           </label>
           <button
             type="button"
-            className="btn-primary"
+            className="btn-primary btn-sm w-full sm:w-auto"
             disabled={!file || pending}
             onClick={onUpload}
           >
-            {pending ? "Enviando..." : "Enviar atividade"}
+            {pending ? "Enviando..." : allowResubmit ? "Reenviar atividade" : "Enviar atividade"}
           </button>
         </div>
-      )}
+      ) : submissionStatus === "corrigido" ? (
+        <p className="text-sm text-muted">Fase corrigida. Aguarde a liberação da próxima fase.</p>
+      ) : null}
 
-      {file ? <p className="text-xs text-muted">Arquivo: {file.name}</p> : null}
+      {file ? (
+        <p role="status" className="alert-success text-sm">
+          Arquivo anexado: {file.name}
+        </p>
+      ) : null}
       <p className="text-xs text-muted">
-        Imagens são otimizadas automaticamente. Outros formatos até 8 MB.
+        Envie imagem, PDF ou Word (.docx). Documentos viram PDF para o corretor marcar. Até 8 MB.
       </p>
 
-      {correction ? (
-        <div className="rounded-xl border border-purple/30 bg-purple/10 p-3 text-sm">
+      {showCorrection ? (
+        <div className="rounded-xl border border-white/10 bg-field/80 p-4 text-sm">
           <p><strong>Nota:</strong> {correction.grade ?? "—"}</p>
           <p className="mt-2"><strong>Feedback:</strong> {correction.feedback || "—"}</p>
           <p className="mt-2"><strong>Erros apontados:</strong> {correction.errorsNotes || "—"}</p>
+          {corrector ? (
+            <CorrectorPublicInline
+              fullName={corrector.fullName}
+              avatarUrl={corrector.avatarUrl}
+              bio={corrector.bio}
+            />
+          ) : (
+            <p className="mt-3 border-t border-white/10 pt-3 text-xs text-muted">
+              Corrigido pela equipe Day Gomes
+            </p>
+          )}
+          {submissionId ? <MembroCorrecaoCardActions submissionId={submissionId} /> : null}
         </div>
       ) : null}
 

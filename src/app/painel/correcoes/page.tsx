@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CorrectionsQueueView } from "@/components/corrector/corrections-queue-view";
+import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { createClient } from "@/lib/supabase/server";
+import { listPendingSubmissionsForStaff } from "@/lib/corrector/pending-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -11,51 +13,31 @@ export default async function CorrecoesPage() {
     redirect("/painel");
   }
 
-  const supabase = await createClient();
-  const { data: submissions } = await supabase
-    .from("phase_submissions")
-    .select(
-      "id, status, submitted_at, profiles(full_name), edital_phases(title, phase_number)",
-    )
-    .in("status", ["enviado", "em_correcao"])
-    .order("submitted_at", { ascending: true });
+  const submissions = await listPendingSubmissionsForStaff(profile);
 
   return (
-    <section>
-      <h1 className="text-3xl font-semibold tracking-tight">Correções</h1>
-      <p className="mt-2 text-muted">
-        Corrija as redações enviadas e libere a próxima fase quando estiver pronto.
-      </p>
-
-      <div className="mt-6 flex flex-col gap-3">
-        {(submissions ?? []).map((submission) => {
-          const member = Array.isArray(submission.profiles)
-            ? submission.profiles[0]
-            : submission.profiles;
-          const phase = Array.isArray(submission.edital_phases)
-            ? submission.edital_phases[0]
-            : submission.edital_phases;
-
-          return (
-            <Link
-              key={submission.id}
-              href={`/painel/correcoes/${submission.id}`}
-              className="panel-card transition hover:border-purple/40"
-            >
-              <p className="font-semibold">{member?.full_name ?? "Aluno"}</p>
-              <p className="mt-1 text-sm text-muted">
-                {phase?.title ?? "Fase"} · Fase {phase?.phase_number ?? "—"}
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                Enviado em {new Date(submission.submitted_at).toLocaleString("pt-BR")}
-              </p>
-            </Link>
-          );
-        })}
-        {!submissions?.length ? (
-          <p className="text-sm text-muted">Nenhum envio pendente de correção.</p>
-        ) : null}
+    <PainelPage>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Correções</h1>
+          <p className="mt-2 text-muted">
+            Fila pendente — filtre por edital, cargo e tipo de envio. Ao abrir, a atividade fica
+            reservada para você.
+          </p>
+        </div>
+        <Link
+          href="/painel/correcoes/corrigidas"
+          className="text-sm font-medium text-purple hover:underline"
+        >
+          Ver corrigidas
+        </Link>
       </div>
-    </section>
+
+      <CorrectionsQueueView
+        submissions={submissions}
+        viewerId={profile.id}
+        viewerRole={profile.role}
+      />
+    </PainelPage>
   );
 }

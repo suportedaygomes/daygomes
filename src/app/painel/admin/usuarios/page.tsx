@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { CreateUserForm } from "@/components/painel/create-user-form";
+import { PainelPage } from "@/components/painel/painel-page";
 import { formatCpf } from "@/lib/cpf";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { ROLE_LABELS, type UserRole } from "@/lib/roles";
@@ -21,7 +22,7 @@ export default async function AdminUsuariosPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+    <PainelPage gap="lg" className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:gap-10">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight">Usuários</h1>
         <p className="mt-2 text-muted">
@@ -63,6 +64,6 @@ export default async function AdminUsuariosPage() {
           <CreateUserForm />
         </div>
       </section>
-    </div>
+    </PainelPage>
   );
 }

@@ -19,7 +19,7 @@ export default async function PainelLayout({ children }: LayoutProps<"/painel">)
 
   if (profile.banned) {
     return (
-      <main className="safe-screen mx-auto flex min-h-dvh max-w-3xl flex-col justify-center">
+      <main className="safe-screen mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center">
         <h1 className="text-3xl font-semibold">Conta indisponível</h1>
         <p className="mt-3 text-muted">
           Entre em contato com a administração para mais informações.

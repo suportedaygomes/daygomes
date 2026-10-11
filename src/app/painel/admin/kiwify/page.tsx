@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { KiwifyMappingForm } from "@/components/painel/kiwify-mapping-form";
+import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
 
@@ -53,7 +54,7 @@ export default async function AdminKiwifyPage() {
   const webhookUrl = `${siteUrl.replace(/\/$/, "")}/api/webhooks/kiwify?token=SEU_TOKEN`;
 
   return (
-    <section className="flex flex-col gap-10">
+    <PainelPage gap="lg">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Kiwify</h1>
         <p className="mt-2 text-muted">
@@ -122,6 +123,6 @@ export default async function AdminKiwifyPage() {
           {!orders?.length ? <li className="text-muted">Nenhum pedido ainda.</li> : null}
         </ul>
       </section>
-    </section>
+    </PainelPage>
   );
 }

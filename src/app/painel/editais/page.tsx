@@ -1,28 +1,15 @@
 import { redirect } from "next/navigation";
-import { MemberPhaseCard } from "@/components/editais/member-phase-card";
-import { getCurrentProfile } from "@/lib/auth/profile";
+import { MemberEditaisView, type MemberEnrollmentView } from "@/components/editais/member-editais-view";
+import { PainelPage } from "@/components/painel/painel-page";
+import { getAvatarPublicUrl, getCurrentProfile } from "@/lib/auth/profile";
+import { getCorrectorPublicProfilesByIds } from "@/lib/corrector/batch-public-profiles";
+import { computeEditalAverageByPhases } from "@/lib/editais/edital-phase-average";
+import { parseSubmissionGrade } from "@/lib/editais/grades";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-type EnrollmentView = {
-  id: string;
-  editalTitle: string;
-  cargoName: string;
-  phases: Array<{
-    id: string;
-    phaseNumber: number;
-    title: string;
-    description: string;
-    deadlineAt: string;
-    submitted: boolean;
-    correction: {
-      grade: number | null;
-      feedback: string;
-      errorsNotes: string;
-    } | null;
-  }>;
-};
 
 export default async function MembroEditaisPage() {
   const { user, profile } = await getCurrentProfile();
@@ -30,12 +17,14 @@ export default async function MembroEditaisPage() {
   if (profile.role !== "membro") redirect("/painel");
 
   const supabase = await createClient();
+  const admin = createAdminClient();
+  const { url: supabaseUrl } = getSupabasePublicEnv();
   const { data: enrollments } = await supabase
     .from("member_edital_enrollments")
-    .select("id, editais(title), edital_cargos(name)")
+    .select("id, cargo_id, editais(title), edital_cargos(name)")
     .eq("member_id", user.id);
 
-  const views: EnrollmentView[] = [];
+  const views: MemberEnrollmentView[] = [];
 
   for (const enrollment of enrollments ?? []) {
     const edital = Array.isArray(enrollment.editais)
@@ -59,20 +48,22 @@ export default async function MembroEditaisPage() {
           .order("phase_number")
       : { data: [] };
 
-    const { data: submissions } = await supabase
+    const { data: submissions } = await admin
       .from("phase_submissions")
-      .select("id, phase_id")
+      .select("id, phase_id, status")
       .eq("enrollment_id", enrollment.id);
 
     const submissionByPhase = new Map(
-      (submissions ?? []).map((item) => [item.phase_id, item.id]),
+      (submissions ?? []).map((item) => [item.phase_id, item]),
     );
 
     const submissionIds = (submissions ?? []).map((item) => item.id);
     const { data: corrections } = submissionIds.length
-      ? await supabase
+      ? await admin
           .from("phase_corrections")
-          .select("submission_id, grade, feedback, errors_notes")
+          .select(
+            "submission_id, grade, feedback, errors_notes, allow_resubmit, corrector_id",
+          )
           .in("submission_id", submissionIds)
       : { data: [] };
 
@@ -80,14 +71,40 @@ export default async function MembroEditaisPage() {
       (corrections ?? []).map((item) => [item.submission_id, item]),
     );
 
+    const correctorProfiles = await getCorrectorPublicProfilesByIds(
+      (corrections ?? []).map((item) => item.corrector_id).filter(Boolean) as string[],
+    );
+
+    const { data: allCargoPhases } = await admin
+      .from("edital_phases")
+      .select("id")
+      .eq("cargo_id", enrollment.cargo_id)
+      .order("phase_number");
+
+    const { average: averageGrade, phasesTotal } = computeEditalAverageByPhases(
+      allCargoPhases ?? [],
+      submissions ?? [],
+      (corrections ?? []).map((item) => ({
+        submission_id: item.submission_id,
+        grade: item.grade,
+        allow_resubmit: item.allow_resubmit,
+      })),
+    );
+
     views.push({
       id: enrollment.id,
       editalTitle: edital?.title ?? "Edital",
       cargoName: cargo?.name ?? "—",
+      phasesTotal,
+      averageGrade,
       phases: (phases ?? []).map((phase) => {
-        const submissionId = submissionByPhase.get(phase.id);
-        const correction = submissionId
-          ? correctionBySubmission.get(submissionId)
+        const submission = submissionByPhase.get(phase.id);
+        const correction = submission
+          ? correctionBySubmission.get(submission.id)
+          : null;
+
+        const correctorProfile = correction?.corrector_id
+          ? correctorProfiles.get(correction.corrector_id)
           : null;
 
         return {
@@ -96,12 +113,22 @@ export default async function MembroEditaisPage() {
           title: phase.title,
           description: phase.description,
           deadlineAt: phase.deadline_at,
-          submitted: Boolean(submissionId),
+          submissionId: submission?.id ?? null,
+          submissionStatus: submission?.status ?? null,
+          allowResubmit: correction?.allow_resubmit ?? false,
           correction: correction
             ? {
-                grade: correction.grade,
+                grade: parseSubmissionGrade(correction.grade),
                 feedback: correction.feedback,
                 errorsNotes: correction.errors_notes,
+                correctorId: correction.corrector_id,
+              }
+            : null,
+          corrector: correctorProfile
+            ? {
+                fullName: correctorProfile.fullName,
+                avatarUrl: getAvatarPublicUrl(supabaseUrl, correctorProfile.avatarPath),
+                bio: correctorProfile.bio,
               }
             : null,
         };
@@ -111,17 +138,17 @@ export default async function MembroEditaisPage() {
 
   if (!views.length) {
     return (
-      <section>
+      <PainelPage>
         <h1 className="text-3xl font-semibold tracking-tight">Meus editais</h1>
         <p className="mt-4 text-muted">
           Você ainda não foi vinculado a nenhum edital. Aguarde o administrador.
         </p>
-      </section>
+      </PainelPage>
     );
   }
 
   return (
-    <section className="flex flex-col gap-10">
+    <PainelPage gap="lg">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Meus editais</h1>
         <p className="mt-2 text-muted">
@@ -129,29 +156,7 @@ export default async function MembroEditaisPage() {
         </p>
       </div>
 
-      {views.map((enrollment) => (
-        <section key={enrollment.id} className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">{enrollment.editalTitle}</h2>
-            <p className="text-sm text-muted">Cargo: {enrollment.cargoName}</p>
-          </div>
-          <div className="grid gap-4">
-            {enrollment.phases.map((phase) => (
-              <MemberPhaseCard
-                key={phase.id}
-                enrollmentId={enrollment.id}
-                phaseId={phase.id}
-                phaseNumber={phase.phaseNumber}
-                title={phase.title}
-                description={phase.description}
-                deadlineAt={phase.deadlineAt}
-                submitted={phase.submitted}
-                correction={phase.correction}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-    </section>
+      <MemberEditaisView enrollments={views} />
+    </PainelPage>
   );
 }

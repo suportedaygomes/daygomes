@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PainelPage } from "@/components/painel/painel-page";
 import { ProfileSettingsForm } from "@/components/painel/profile-settings-form";
 import {
   getAvatarPublicUrl,
@@ -18,21 +19,23 @@ export default async function PerfilPage() {
   }
 
   return (
-    <section className="max-w-2xl">
+    <PainelPage>
       <h1 className="text-3xl font-semibold tracking-tight">Meu perfil</h1>
-      <p className="mt-2 text-muted">
-        Atualize sua foto, data de nascimento e senha quando quiser.
+      <p className="-mt-4 text-muted">
+        {profile.role === "corretor" || profile.role === "admin"
+          ? "Atualize foto, apresentação profissional e senha. Os alunos veem sua foto ao receber correções."
+          : "Atualize sua foto, data de nascimento e senha quando quiser."}
       </p>
-      <div className="mt-8">
-        <ProfileSettingsForm
+      <ProfileSettingsForm
           email={user.email ?? ""}
           fullName={getDisplayName(user, profile)}
           cpf={profile.cpf}
           role={profile.role}
           birthDate={profile.birth_date}
+          whatsapp={profile.whatsapp}
+          bio={profile.bio}
           avatarUrl={getAvatarPublicUrl(url, profile.avatar_path)}
         />
-      </div>
-    </section>
+    </PainelPage>
   );
 }

@@ -17,11 +17,35 @@ export function submissionObjectKey(
   phaseId: string,
   extension: string,
 ) {
-  return `submissions/${userId}/${enrollmentId}/${phaseId}.${extension}`;
+  return `submissions/${userId}/${enrollmentId}/${phaseId}/original.${extension}`;
+}
+
+export function submissionPreviewPdfKey(
+  userId: string,
+  enrollmentId: string,
+  phaseId: string,
+) {
+  return `submissions/${userId}/${enrollmentId}/${phaseId}/preview.pdf`;
+}
+
+export function supportAttachmentKey(ticketId: string, extension: string) {
+  return `support/${ticketId}/attachment.${extension}`;
+}
+
+export function supportReplyAttachmentKey(
+  ticketId: string,
+  replyId: string,
+  extension: string,
+) {
+  return `support/${ticketId}/reply-${replyId}.${extension}`;
 }
 
 export function isR2ObjectKey(path: string) {
-  return path.startsWith("avatars/") || path.startsWith("submissions/");
+  return (
+    path.startsWith("avatars/") ||
+    path.startsWith("submissions/") ||
+    path.startsWith("support/")
+  );
 }
 
 export async function putR2Object(input: {

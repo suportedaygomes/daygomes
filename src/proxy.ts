@@ -31,7 +31,12 @@ export async function proxy(request: NextRequest) {
   const isPublicAuthRoute =
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
-    pathname.startsWith("/auth/");
+    pathname.startsWith("/auth/") ||
+    pathname === "/suporte";
+
+  if (user && pathname === "/suporte") {
+    return redirectWithCookies(request, "/painel/suporte", supabaseResponse);
+  }
 
   if (!user && !isPublicAuthRoute) {
     return redirectWithCookies(request, "/login", supabaseResponse);

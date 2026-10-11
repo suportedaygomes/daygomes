@@ -1,6 +1,10 @@
-import { InstallPrompt } from "@/components/install-prompt";
+import { AdminDashboard } from "@/components/painel/admin-dashboard";
+import { CorrectorDashboard } from "@/components/painel/corrector-dashboard";
+import { MemberDashboard } from "@/components/painel/member-dashboard";
 import { getCurrentProfile, getDisplayName } from "@/lib/auth/profile";
-import { ROLE_LABELS } from "@/lib/roles";
+import { getAdminDashboardStats } from "@/lib/admin/dashboard-stats";
+import { getCorrectorDashboardStats } from "@/lib/corrector/dashboard-stats";
+import { getMemberDashboardStats } from "@/lib/member/dashboard-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -12,30 +16,22 @@ export default async function PainelHomePage() {
   }
 
   const name = getDisplayName(user, profile);
+  const firstName = name.split(/\s+/)[0] ?? name;
 
-  return (
-    <section className="panel-card max-w-xl">
-      <p className="text-sm font-semibold tracking-[0.18em] text-beige uppercase">
-        Painel
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-        Olá, {name.split(/\s+/)[0]}
-      </h1>
-      <p className="mt-4 text-base leading-7 text-muted">
-        Você está conectado como {ROLE_LABELS[profile.role].toLowerCase()}. Use o menu
-        acima para atualizar seu perfil
-        {profile.role === "admin"
-          ? ", gerenciar editais ou cadastrar novos usuários"
-          : profile.role === "corretor"
-            ? " e corrigir redações pendentes"
-            : profile.role === "membro"
-              ? " e enviar suas atividades nos editais"
-              : ""}
-        .
-      </p>
-      <div className="mt-8 max-w-xs">
-        <InstallPrompt />
-      </div>
-    </section>
-  );
+  if (profile.role === "corretor") {
+    const stats = await getCorrectorDashboardStats(user.id);
+    return <CorrectorDashboard firstName={firstName} stats={stats} />;
+  }
+
+  if (profile.role === "membro") {
+    const stats = await getMemberDashboardStats(user.id);
+    return <MemberDashboard firstName={firstName} stats={stats} />;
+  }
+
+  if (profile.role === "admin") {
+    const stats = await getAdminDashboardStats(user.id);
+    return <AdminDashboard firstName={firstName} stats={stats} />;
+  }
+
+  return null;
 }
