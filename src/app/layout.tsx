@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import Script from "next/script";
+import { CSP_NONCE_HEADER } from "@/lib/security/headers";
 import { Outfit } from "next/font/google";
 import { PwaRegister } from "@/components/pwa-register";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -44,11 +46,13 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? undefined;
+
   return (
     <html lang="pt-BR" className={`${outfit.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-background text-foreground">
-        <Script id="theme-bootstrap" strategy="beforeInteractive">
+        <Script id="theme-bootstrap" strategy="beforeInteractive" nonce={nonce}>
           {themeBootstrapScript}
         </Script>
         <ThemeProvider>

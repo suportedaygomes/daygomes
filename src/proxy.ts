@@ -1,10 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { applySecurityHeaders } from "@/lib/security/headers";
+import {
+  applySecurityHeaders,
+  applySecurityRequestHeaders,
+  createRequestNonce,
+} from "@/lib/security/headers";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const nonce = createRequestNonce();
+  const requestHeaders = new Headers(request.headers);
+  applySecurityRequestHeaders(requestHeaders, nonce);
+  const forward = { headers: requestHeaders };
+
+  let supabaseResponse = NextResponse.next({ request: forward });
   const { url, anonKey } = getSupabasePublicEnv();
 
   const supabase = createServerClient(url, anonKey, {
@@ -16,7 +25,7 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        supabaseResponse = NextResponse.next({ request });
+        supabaseResponse = NextResponse.next({ request: forward });
         cookiesToSet.forEach(({ name, value, options }) => {
           supabaseResponse.cookies.set(name, value, options);
         });
@@ -39,28 +48,29 @@ export async function proxy(request: NextRequest) {
     pathname === "/cookies";
 
   if (user && pathname === "/suporte") {
-    return redirectWithCookies(request, "/painel/suporte", supabaseResponse);
+    return redirectWithCookies(request, "/painel/suporte", supabaseResponse, nonce);
   }
 
   if (!user && !isPublicAuthRoute) {
-    return redirectWithCookies(request, "/login", supabaseResponse);
+    return redirectWithCookies(request, "/login", supabaseResponse, nonce);
   }
 
   if (user && pathname === "/login") {
-    return redirectWithCookies(request, "/painel", supabaseResponse);
+    return redirectWithCookies(request, "/painel", supabaseResponse, nonce);
   }
 
   if (user && pathname === "/login/recuperar") {
-    return redirectWithCookies(request, "/painel", supabaseResponse);
+    return redirectWithCookies(request, "/painel", supabaseResponse, nonce);
   }
 
-  return withSecurityHeaders(supabaseResponse);
+  return withSecurityHeaders(supabaseResponse, nonce);
 }
 
 function redirectWithCookies(
   request: NextRequest,
   pathname: string,
   supabaseResponse: NextResponse,
+  nonce: string,
 ) {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
@@ -68,11 +78,11 @@ function redirectWithCookies(
   supabaseResponse.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set(cookie);
   });
-  return withSecurityHeaders(redirectResponse);
+  return withSecurityHeaders(redirectResponse, nonce);
 }
 
-function withSecurityHeaders(response: NextResponse): NextResponse {
-  applySecurityHeaders(response.headers);
+function withSecurityHeaders(response: NextResponse, nonce: string): NextResponse {
+  applySecurityHeaders(response.headers, nonce);
   return response;
 }
 
