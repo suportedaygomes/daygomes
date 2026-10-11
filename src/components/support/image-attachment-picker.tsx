@@ -7,6 +7,7 @@ type ImageAttachmentPickerProps = {
   file: File | null;
   onFileChange: (file: File | null) => void;
   disabled?: boolean;
+  compact?: boolean;
 };
 
 function formatFileSize(bytes: number) {
@@ -20,6 +21,7 @@ export function ImageAttachmentPicker({
   file,
   onFileChange,
   disabled = false,
+  compact = false,
 }: ImageAttachmentPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -68,6 +70,53 @@ export function ImageAttachmentPicker({
     if (disabled) return;
     const dropped = event.dataTransfer.files?.[0];
     if (dropped) validateAndSet(dropped);
+  }
+
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          className="sr-only"
+          disabled={disabled}
+          onChange={onInputChange}
+        />
+        {!file ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={pickFile}
+            className="btn-secondary min-h-9 px-3 text-xs"
+          >
+            Foto (opcional)
+          </button>
+        ) : (
+          <>
+            <span className="max-w-[10rem] truncate text-xs text-muted">{file.name}</span>
+            <button
+              type="button"
+              className="text-xs text-purple hover:underline"
+              disabled={disabled}
+              onClick={pickFile}
+            >
+              Trocar
+            </button>
+            <button
+              type="button"
+              className="text-xs text-muted hover:underline"
+              disabled={disabled}
+              onClick={() => validateAndSet(null)}
+            >
+              Remover
+            </button>
+          </>
+        )}
+        {localError ? <p className="alert-error w-full text-xs">{localError}</p> : null}
+      </div>
+    );
   }
 
   return (

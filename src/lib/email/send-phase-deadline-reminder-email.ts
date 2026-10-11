@@ -1,5 +1,6 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
+import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
 import type { ReminderKind } from "@/lib/editais/phase-submission-pending";
 
 type SendPhaseDeadlineReminderEmailInput = {
@@ -15,10 +16,6 @@ type SendPhaseDeadlineReminderEmailInput = {
   editaisUrl: string;
 };
 
-function primaryButton(href: string, label: string) {
-  return `<p><a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 18px;background:#8e3ebe;color:#fff;text-decoration:none;border-radius:10px">${escapeHtml(label)}</a></p>`;
-}
-
 function formatDeadline(date: Date) {
   return date.toLocaleString("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -30,13 +27,13 @@ function formatDeadline(date: Date) {
 export async function sendPhaseDeadlineReminderEmail(
   input: SendPhaseDeadlineReminderEmailInput,
 ): Promise<SendResult> {
-  const greeting = input.fullName.trim() || "Olá";
+  const greeting = escapeHtml(input.fullName.trim() || "Olá");
   const phaseLabel = `Fase ${input.phaseNumber} — ${input.phaseTitle}`;
   const deadlineLabel = formatDeadline(input.deadlineAt);
   const daysLabel = input.reminderKind === "7_days" ? "7 dias" : "1 dia";
 
   const actionLine = input.isResubmit
-    ? "O corretor liberou o <strong>reenvio</strong> desta fase. Envie a atividade corrigida antes do prazo."
+    ? "O corretor liberou o <strong style=\"color:#f6f3ef;\">reenvio</strong> desta fase. Envie a atividade corrigida antes do prazo."
     : "Você ainda não enviou a atividade desta fase. Não perca o prazo.";
 
   const subject =
@@ -44,16 +41,21 @@ export async function sendPhaseDeadlineReminderEmail(
       ? `Faltam 7 dias para enviar — ${input.editalTitle}`
       : `Último dia para enviar — ${input.editalTitle}`;
 
-  const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111;max-width:560px">
-      <p>${escapeHtml(greeting)},</p>
-      <p>Faltam <strong>${daysLabel}</strong> para o encerramento da atividade no edital
-      <strong>${escapeHtml(input.editalTitle)}</strong> (cargo: ${escapeHtml(input.cargoName)}).</p>
-      <p><strong>${escapeHtml(phaseLabel)}</strong></p>
-      <p><strong>Prazo:</strong> ${escapeHtml(deadlineLabel)}</p>
-      <p>${actionLine}</p>
-      ${primaryButton(input.editaisUrl, "Enviar atividade no painel")}
-      <p style="color:#666;font-size:13px">Dúvidas? Escreva para acesso@daygomes.com.br.</p>
-    </div>`;
+  const bodyHtml = `
+      <p style="margin:0 0 12px;">${greeting},</p>
+      <p style="margin:0 0 12px;">Faltam <strong style="color:#f6f3ef;">${daysLabel}</strong> para o encerramento da atividade no edital
+      <strong style="color:#f6f3ef;">${escapeHtml(input.editalTitle)}</strong> (cargo: ${escapeHtml(input.cargoName)}).</p>
+      <p style="margin:0 0 8px;"><strong style="color:#f6f3ef;">${escapeHtml(phaseLabel)}</strong></p>
+      <p style="margin:0 0 12px;"><strong style="color:#f6f3ef;">Prazo:</strong> ${escapeHtml(deadlineLabel)}</p>
+      <p style="margin:0;">${actionLine}</p>`;
+
+  const html = buildTransactionalEmail({
+    eyebrow: "Prazo de envio",
+    title: input.reminderKind === "7_days" ? "Atenção ao prazo" : "Último dia para enviar",
+    bodyHtml,
+    button: { href: input.editaisUrl, label: "Enviar atividade no painel" },
+    footerNote: "Dúvidas? Escreva para acesso@daygomes.com.br.",
+  });
 
   return sendEmail({ to: input.to, subject, html });
 }

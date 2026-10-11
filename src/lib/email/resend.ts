@@ -1,10 +1,16 @@
 import { Resend } from "resend";
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+};
+
 export type SendEmailInput = {
   to: string | string[];
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 };
 
 export type SendResult = { ok: true; id?: string } | { ok: false; error: string };
@@ -40,6 +46,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
       subject: input.subject,
       html: input.html,
       replyTo: input.replyTo ?? getReplyTo(),
+      attachments: input.attachments?.map((item) => ({
+        filename: item.filename,
+        content: item.content,
+      })),
     });
 
     if (error) {

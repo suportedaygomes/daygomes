@@ -14,9 +14,15 @@ export type SupportRequestFormDefaults = {
 type SupportRequestFormProps = {
   mode: "guest" | "member";
   defaults?: SupportRequestFormDefaults;
+  /** Layout enxuto para caber em uma tela (página pública). */
+  compact?: boolean;
 };
 
-export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) {
+export function SupportRequestForm({
+  mode,
+  defaults,
+  compact = false,
+}: SupportRequestFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState(defaults?.email ?? "");
   const [whatsapp, setWhatsapp] = useState(defaults?.whatsapp ?? "");
@@ -64,21 +70,19 @@ export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) 
     }
   }
 
-  return (
-    <form onSubmit={onSubmit} className="panel-card flex flex-col gap-4">
-      {defaults?.fullName && lockedContact ? (
-        <div>
-          <p className="text-sm text-muted">Nome</p>
-          <p className="font-medium">{defaults.fullName}</p>
-        </div>
-      ) : null}
+  const gap = compact ? "gap-3" : "gap-4";
+  const cardPad = compact ? "px-4 py-4 sm:px-5 sm:py-5" : "";
+  const labelClass = `flex flex-col gap-1.5 font-medium ${compact ? "text-sm" : "text-sm"}`;
+  const inputCompact = compact ? "min-h-11 py-2.5 text-sm" : "";
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-2 text-sm font-medium">
+  const contactFields = (
+    <>
+      <div className={`grid gap-3 sm:grid-cols-2 ${compact ? "" : "gap-4"}`}>
+        <label className={labelClass}>
           E-mail
           <input
             type="email"
-            className="field-input"
+            className={`field-input ${inputCompact}`}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             readOnly={lockedContact}
@@ -86,11 +90,11 @@ export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) 
           />
         </label>
 
-        <label className="flex flex-col gap-2 text-sm font-medium">
+        <label className={labelClass}>
           WhatsApp
           <input
             type="tel"
-            className="field-input"
+            className={`field-input ${inputCompact}`}
             value={whatsappLocked ? formatWhatsappDisplay(whatsapp) : whatsapp}
             onChange={(event) => setWhatsapp(event.target.value)}
             readOnly={whatsappLocked}
@@ -106,11 +110,11 @@ export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) 
         </p>
       ) : null}
 
-      <label className="flex flex-col gap-2 text-sm font-medium">
+      <label className={labelClass}>
         Título
         <input
           type="text"
-          className="field-input"
+          className={`field-input ${inputCompact}`}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Resumo do problema"
@@ -118,15 +122,24 @@ export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) 
           maxLength={120}
         />
       </label>
+    </>
+  );
 
-      <label className="flex flex-col gap-2 text-sm font-medium">
+  const detailFields = (
+    <>
+      <label className={labelClass}>
         Descrição
         <textarea
-          className="field-input min-h-28 resize-y py-3"
+          className={`field-input resize-none py-2.5 ${
+            compact ? "min-h-[4.75rem] text-sm leading-snug" : "min-h-28 resize-y py-3"
+          }`}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          placeholder="Explique o que aconteceu e como podemos ajudar"
+          placeholder={
+            compact ? "O que aconteceu?" : "Explique o que aconteceu e como podemos ajudar"
+          }
           required
+          rows={compact ? 4 : undefined}
         />
       </label>
 
@@ -134,6 +147,7 @@ export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) 
         file={file}
         onFileChange={setFile}
         disabled={pending}
+        compact={compact}
       />
       {error ? <p className="alert-error">{error}</p> : null}
       {message ? <p className="alert-success">{message}</p> : null}
@@ -141,10 +155,24 @@ export function SupportRequestForm({ mode, defaults }: SupportRequestFormProps) 
       <button
         type="submit"
         disabled={pending}
-        className="btn-primary min-h-12 w-full text-base sm:w-fit sm:px-8"
+        className={`btn-primary w-full ${compact ? "min-h-11 text-sm" : "min-h-12 text-base sm:w-fit sm:px-8"}`}
       >
-        {pending ? "Enviando..." : "Enviar pedido de ajuda"}
+        {pending ? "Enviando..." : compact ? "Enviar" : "Enviar pedido de ajuda"}
       </button>
+    </>
+  );
+
+  return (
+    <form onSubmit={onSubmit} className={`panel-card flex min-h-0 flex-col ${gap} ${cardPad}`}>
+      {defaults?.fullName && lockedContact ? (
+        <div>
+          <p className="text-sm text-muted">Nome</p>
+          <p className="font-medium">{defaults.fullName}</p>
+        </div>
+      ) : null}
+
+      {contactFields}
+      {detailFields}
     </form>
   );
 }

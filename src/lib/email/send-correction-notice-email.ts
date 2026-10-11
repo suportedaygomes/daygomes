@@ -1,5 +1,6 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
+import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
 
 type SendCorrectionNoticeEmailInput = {
   to: string;
@@ -11,25 +12,26 @@ type SendCorrectionNoticeEmailInput = {
   correctionUrl: string;
 };
 
-function primaryButton(href: string, label: string) {
-  return `<p><a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 18px;background:#8e3ebe;color:#fff;text-decoration:none;border-radius:10px">${escapeHtml(label)}</a></p>`;
-}
-
 export async function sendCorrectionNoticeEmail(
   input: SendCorrectionNoticeEmailInput,
 ): Promise<SendResult> {
-  const greeting = input.fullName.trim() || "Olá";
+  const greeting = escapeHtml(input.fullName.trim() || "Olá");
   const phaseLabel = `Fase ${input.phaseNumber} — ${input.phaseTitle}`;
 
-  const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111;max-width:560px">
-      <p>${escapeHtml(greeting)},</p>
-      <p>Sua atividade no edital <strong>${escapeHtml(input.editalTitle)}</strong> foi corrigida.</p>
-      <p><strong>${escapeHtml(phaseLabel)}</strong><br />
-      Nota: <strong>${escapeHtml(String(input.grade))}</strong></p>
-      <p>No painel você pode baixar seu envio original, ver os grifos no texto e ler os comentários de cada erro.</p>
-      ${primaryButton(input.correctionUrl, "Ver minha correção")}
-      <p style="color:#666;font-size:13px">Dúvidas? Escreva para acesso@daygomes.com.br.</p>
-    </div>`;
+  const bodyHtml = `
+      <p style="margin:0 0 12px;">${greeting},</p>
+      <p style="margin:0 0 12px;">Sua atividade no edital <strong style="color:#f6f3ef;">${escapeHtml(input.editalTitle)}</strong> foi corrigida.</p>
+      <p style="margin:0 0 8px;"><strong style="color:#f6f3ef;">${escapeHtml(phaseLabel)}</strong></p>
+      <p style="margin:0 0 12px;">Nota: <strong style="color:#ab5fd0;font-size:18px;">${escapeHtml(String(input.grade))}</strong></p>
+      <p style="margin:0;">No painel você pode baixar seu envio original, ver os grifos no texto e ler os comentários de cada erro.</p>`;
+
+  const html = buildTransactionalEmail({
+    eyebrow: "Correção",
+    title: "Sua atividade foi corrigida",
+    bodyHtml,
+    button: { href: input.correctionUrl, label: "Ver minha correção" },
+    footerNote: "Dúvidas? Responda este e-mail ou escreva para acesso@daygomes.com.br.",
+  });
 
   return sendEmail({
     to: input.to,

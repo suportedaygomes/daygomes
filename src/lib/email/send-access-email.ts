@@ -1,5 +1,6 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
+import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
 
 type SendAccessEmailInput = {
   to: string;
@@ -10,18 +11,10 @@ type SendAccessEmailInput = {
   source?: "kiwify" | "admin";
 };
 
-function primaryButton(href: string, label: string) {
-  return `<p><a href="${escapeHtml(href)}" style="display:inline-block;padding:12px 18px;background:#8e3ebe;color:#fff;text-decoration:none;border-radius:10px">${escapeHtml(label)}</a></p>`;
-}
-
-function emailShell(body: string) {
-  return `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111;max-width:560px">${body}</div>`;
-}
-
 export async function sendAccessEmail(input: SendAccessEmailInput): Promise<SendResult> {
   const isNewAccount = Boolean(input.password);
   const source = input.source ?? "kiwify";
-  const greeting = input.fullName.trim() || "Olá";
+  const greeting = escapeHtml(input.fullName.trim() || "Olá");
 
   const subject = isNewAccount
     ? "Seu acesso ao Day Gomes foi liberado"
@@ -33,24 +26,28 @@ export async function sendAccessEmail(input: SendAccessEmailInput): Promise<Send
       : "Sua compra na Kiwify foi confirmada e o acesso à plataforma Day Gomes já está liberado.";
 
   const productLine = input.productName
-    ? `<p>Curso/produto: <strong>${escapeHtml(input.productName)}</strong></p>`
+    ? `<p style="margin:0 0 12px;">Curso/produto: <strong style="color:#f6f3ef;">${escapeHtml(input.productName)}</strong></p>`
     : "";
 
   const credentialsBlock = isNewAccount
-    ? `<p><strong>E-mail:</strong> ${escapeHtml(input.to)}<br />
-       <strong>Senha temporária:</strong> ${escapeHtml(input.password ?? "")}</p>
-       <p>Recomendamos alterar a senha em <em>Meu perfil</em> após o primeiro acesso.</p>`
-    : `<p>Use o mesmo e-mail e senha que você já utiliza na plataforma.</p>`;
+    ? `<p style="margin:0 0 12px;"><strong style="color:#f6f3ef;">E-mail:</strong> ${escapeHtml(input.to)}<br />
+       <strong style="color:#f6f3ef;">Senha temporária:</strong> ${escapeHtml(input.password ?? "")}</p>
+       <p style="margin:0 0 12px;">Recomendamos alterar a senha em <em>Meu perfil</em> após o primeiro acesso.</p>`
+    : `<p style="margin:0 0 12px;">Use o mesmo e-mail e senha que você já utiliza na plataforma.</p>`;
 
-  const html = emailShell(`
-      <p>${escapeHtml(greeting)},</p>
-      <p>${intro}</p>
+  const bodyHtml = `
+      <p style="margin:0 0 12px;">${greeting},</p>
+      <p style="margin:0 0 12px;">${intro}</p>
       ${productLine}
-      ${credentialsBlock}
-      ${primaryButton(input.loginUrl, "Entrar na plataforma")}
-      <p style="color:#666;font-size:13px">Dúvidas? Responda este e-mail ou escreva para acesso@daygomes.com.br.</p>
-      <p style="color:#666;font-size:13px">Se você não reconhece este aviso, ignore este e-mail.</p>
-    `);
+      ${credentialsBlock}`;
+
+  const html = buildTransactionalEmail({
+    eyebrow: isNewAccount ? "Acesso liberado" : "Novo conteúdo",
+    title: isNewAccount ? "Bem-vindo(a) ao Day Gomes" : "Novo curso disponível",
+    bodyHtml,
+    button: { href: input.loginUrl, label: "Entrar na plataforma" },
+    footerNote: "Se você não reconhece este aviso, ignore este e-mail.",
+  });
 
   return sendEmail({ to: input.to, subject, html });
 }
@@ -61,17 +58,22 @@ export async function sendRefundNoticeEmail(input: {
   productName?: string;
 }): Promise<SendResult> {
   const productLine = input.productName
-    ? `<p>Produto: <strong>${escapeHtml(input.productName)}</strong></p>`
+    ? `<p style="margin:0 0 12px;">Produto: <strong style="color:#f6f3ef;">${escapeHtml(input.productName)}</strong></p>`
     : "";
 
-  const html = emailShell(`
-      <p>Olá,</p>
-      <p>Identificamos o <strong>reembolso</strong> da sua compra na Kiwify.</p>
+  const bodyHtml = `
+      <p style="margin:0 0 12px;">Olá,</p>
+      <p style="margin:0 0 12px;">Identificamos o <strong style="color:#f6f3ef;">reembolso</strong> da sua compra na Kiwify.</p>
       ${productLine}
-      <p>O acesso ao conteúdo vinculado a essa compra foi encerrado na plataforma Day Gomes.</p>
-      <p>Se você acredita que isso é um engano, entre em contato: acesso@daygomes.com.br</p>
-      ${primaryButton(input.loginUrl, "Acessar a plataforma")}
-    `);
+      <p style="margin:0 0 12px;">O acesso ao conteúdo vinculado a essa compra foi encerrado na plataforma Day Gomes.</p>
+      <p style="margin:0;">Se você acredita que isso é um engano, entre em contato: acesso@daygomes.com.br</p>`;
+
+  const html = buildTransactionalEmail({
+    eyebrow: "Kiwify",
+    title: "Acesso encerrado",
+    bodyHtml,
+    button: { href: input.loginUrl, label: "Acessar a plataforma" },
+  });
 
   return sendEmail({
     to: input.to,

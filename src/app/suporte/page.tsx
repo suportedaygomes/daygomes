@@ -10,33 +10,37 @@ export const metadata: Metadata = {
 
 export default function SuportePublicPage() {
   return (
-    <main className="safe-screen mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-8 py-8">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <Link href="/login">
+    <main className="safe-screen flex min-h-dvh flex-col">
+      <header className="relative shrink-0 pb-1 text-center">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-1/2 h-40 w-[min(20rem,85vw)] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(171,95,208,0.4),transparent_70%)] blur-2xl"
+        />
+        <Link href="/login" className="relative z-10 mx-auto block w-fit pt-1">
           <Image
-            src="/icons/icon-192.png"
-            alt="Day Gomes"
-            width={64}
-            height={64}
-            className="rounded-2xl"
+            src="/logoday.png"
+            alt="Logotipo Day Gomes"
+            width={843}
+            height={559}
+            priority
+            sizes="(min-width: 640px) 280px, 220px"
+            className="login-logo mx-auto h-auto w-full max-w-[13rem] object-contain sm:max-w-[16rem]"
           />
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Suporte</h1>
-          <p className="mt-2 text-sm text-muted">
-            Conte o que aconteceu. Nossa equipe responde por e-mail ou WhatsApp.
-          </p>
-        </div>
+        <h1 className="relative z-10 mt-2 text-lg font-semibold tracking-tight sm:text-xl">
+          Suporte
+        </h1>
+        <p className="relative z-10 mt-1 text-sm text-muted">
+          Resposta por e-mail ou WhatsApp.{" "}
+          <Link href="/login" className="text-purple hover:underline">
+            Já tem conta?
+          </Link>
+        </p>
+      </header>
+
+      <div className="mx-auto flex w-full min-h-0 max-w-xl flex-1 flex-col justify-center py-3 sm:max-w-2xl">
+        <SupportRequestForm mode="guest" compact />
       </div>
-
-      <SupportRequestForm mode="guest" />
-
-      <p className="text-center text-sm text-muted">
-        Já tem conta?{" "}
-        <Link href="/login" className="text-purple hover:underline">
-          Entrar
-        </Link>
-      </p>
     </main>
   );
 }

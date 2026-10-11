@@ -63,7 +63,7 @@ export async function POST(request: Request, context: RouteContext) {
   const admin = createAdminClient();
   const { data: ticket } = await admin
     .from("support_tickets")
-    .select("id, title, status, requester_email, requester_name")
+    .select("id, title, status, requester_email, requester_name, member_id")
     .eq("id", ticketId)
     .maybeSingle();
 
@@ -74,6 +74,7 @@ export async function POST(request: Request, context: RouteContext) {
   const replyId = randomUUID();
   let attachmentPath: string | null = null;
   let attachmentMime: string | null = null;
+  let attachmentBuffer: Buffer | null = null;
 
   if (imageFile) {
     if (!isR2Configured()) {
@@ -81,6 +82,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const buffer = Buffer.from(await imageFile.arrayBuffer());
+    attachmentBuffer = buffer;
     attachmentMime = imageFile.type;
     attachmentPath = supportReplyAttachmentKey(
       ticketId,
@@ -126,15 +128,22 @@ export async function POST(request: Request, context: RouteContext) {
     /\/$/,
     "",
   );
-  const ticketUrl = `${siteUrl}/painel/suporte/chamado/${ticketId}`;
+  const hasPortalAccess = Boolean(ticket.member_id);
 
   const emailResult = await sendSupportReplyEmail({
     to: ticket.requester_email,
     fullName: ticket.requester_name ?? "",
     ticketTitle: ticket.title,
     ticketId,
-    replyPreview: body,
-    ticketUrl,
+    replyBody: body,
+    hasPortalAccess,
+    ticketUrl: hasPortalAccess
+      ? `${siteUrl}/painel/suporte/chamado/${ticketId}`
+      : undefined,
+    attachment:
+      attachmentBuffer && attachmentMime
+        ? { buffer: attachmentBuffer, mime: attachmentMime }
+        : null,
   });
 
   const emailNote = emailResult.ok
