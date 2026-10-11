@@ -1,13 +1,20 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 
-const DEFAULT_LOGO_URL = "https://daygomes.com.br/logoday.png";
+const DEFAULT_SITE = "https://daygomes.com.br";
+/** Versão 520×345, fundo sólido — evita artefato ao redimensionar no Gmail/iOS. */
+const EMAIL_LOGO_FILE = "logoday-email.jpg";
+const EMAIL_LOGO_WIDTH = 520;
+const EMAIL_LOGO_HEIGHT = 345;
 
 export function transactionalLogoUrl(): string {
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (site) {
-    return `${site}/logoday.png`;
-  }
-  return DEFAULT_LOGO_URL;
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? DEFAULT_SITE;
+  return `${site}/${EMAIL_LOGO_FILE}`;
+}
+
+/** Marcação da logo para clientes de e-mail (Resend, etc.). */
+export function transactionalEmailLogoImg(): string {
+  const logoUrl = transactionalLogoUrl();
+  return `<img src="${escapeHtml(logoUrl)}" width="${EMAIL_LOGO_WIDTH}" height="${EMAIL_LOGO_HEIGHT}" alt="Day Gomes" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:100%;max-width:${EMAIL_LOGO_WIDTH}px;height:auto;-ms-interpolation-mode:bicubic;" />`;
 }
 
 export function transactionalPrimaryButton(href: string, label: string): string {
@@ -35,7 +42,7 @@ type BuildTransactionalEmailInput = {
 
 /** Layout escuro alinhado aos templates do Supabase Auth. */
 export function buildTransactionalEmail(input: BuildTransactionalEmailInput): string {
-  const logoUrl = transactionalLogoUrl();
+  const logoImg = transactionalEmailLogoImg();
   const button = input.button
     ? transactionalPrimaryButton(input.button.href, input.button.label)
     : "";
@@ -57,7 +64,7 @@ export function buildTransactionalEmail(input: BuildTransactionalEmailInput): st
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
           <tr>
             <td align="center" style="padding-bottom:28px;">
-              <img src="${escapeHtml(logoUrl)}" width="168" alt="Day Gomes" style="display:block;border:0;height:auto;max-width:168px;" />
+              ${logoImg}
             </td>
           </tr>
           <tr>

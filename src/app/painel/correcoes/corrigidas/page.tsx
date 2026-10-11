@@ -21,7 +21,7 @@ export default async function CorrecoesCorrigidasPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Corrigidas</h1>
           <p className="mt-2 text-muted">
-            Redações já corrigidas — abra para revisar ou alterar a correção.
+            Redações já corrigidas. Abra para revisar ou alterar a correção.
           </p>
         </div>
         <Link href="/painel/correcoes" className="text-sm font-medium text-purple hover:underline">

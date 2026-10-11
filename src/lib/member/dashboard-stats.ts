@@ -164,7 +164,7 @@ export async function getMemberDashboardStats(
               id: `correction-${submission.id}`,
               kind: "correction",
               title: "Correção definitiva disponível",
-              body: `${editalTitle} · ${phase.title} — nota ${gradeValue}`,
+              body: `${editalTitle} · ${phase.title}: nota ${gradeValue}`,
               href: `/painel/editais/correcao/${submission.id}`,
               sortAt: updatedAt,
             });
@@ -181,7 +181,7 @@ export async function getMemberDashboardStats(
             id: `deadline-${phase.id}`,
             kind: allowResubmit ? "resubmit" : "deadline",
             title: allowResubmit ? "Reenvio liberado" : "Prazo se aproximando",
-            body: `${phase.title} — ${daysLeft === 0 ? "encerra hoje" : `faltam ${daysLeft} dia(s)`}`,
+            body: `${phase.title}: ${daysLeft === 0 ? "encerra hoje" : `faltam ${daysLeft} dia(s)`}`,
             href: "/painel/editais",
             sortAt: phase.deadline_at,
           });

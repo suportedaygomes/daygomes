@@ -21,7 +21,7 @@ export default async function CorrecoesPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Correções</h1>
           <p className="mt-2 text-muted">
-            Fila pendente — filtre por edital, cargo e tipo de envio. Ao abrir, a atividade fica
+            Fila pendente. Filtre por edital, cargo e tipo de envio. Ao abrir, a atividade fica
             reservada para você.
           </p>
         </div>

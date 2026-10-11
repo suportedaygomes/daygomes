@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
 import { InstallPrompt } from "@/components/install-prompt";
+import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
 
 export function LoginForm() {
   const router = useRouter();
@@ -143,6 +144,19 @@ export function LoginForm() {
         </p>
 
         <InstallPrompt />
+
+        <p className="text-center text-xs leading-5 text-muted">
+          Ao entrar, você confirma que leu os{" "}
+          <Link href="/termos" className="text-purple-light hover:underline">
+            Termos de Uso
+          </Link>{" "}
+          e a{" "}
+          <Link href="/privacidade" className="text-purple-light hover:underline">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
+        <LegalFooterLinks />
       </form>
     </div>
   );

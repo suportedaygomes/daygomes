@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
 import { SupportRequestForm } from "@/components/support/support-request-form";
 
 export const metadata: Metadata = {
@@ -38,8 +39,16 @@ export default function SuportePublicPage() {
         </p>
       </header>
 
-      <div className="mx-auto flex w-full min-h-0 max-w-xl flex-1 flex-col justify-center py-3 sm:max-w-2xl">
+      <div className="mx-auto flex w-full min-h-0 max-w-xl flex-1 flex-col justify-center gap-3 py-3 sm:max-w-2xl">
         <SupportRequestForm mode="guest" compact />
+        <p className="text-center text-xs leading-5 text-muted">
+          Ao enviar, você concorda com o tratamento dos dados conforme a{" "}
+          <Link href="/privacidade" className="text-purple hover:underline">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
+        <LegalFooterLinks />
       </div>
     </main>
   );

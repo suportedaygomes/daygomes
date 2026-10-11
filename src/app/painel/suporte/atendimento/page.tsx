@@ -32,7 +32,7 @@ export default async function SuporteAtendimentoPage() {
 
   return (
     <PainelPage>
-      <h1 className="text-3xl font-semibold tracking-tight">Atendimento — Suporte</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Atendimento de suporte</h1>
       <p className="mt-2 text-muted">
         {openCount} chamado{openCount === 1 ? "" : "s"} aguardando acompanhamento.
       </p>

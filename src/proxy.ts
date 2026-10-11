@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { applySecurityHeaders } from "@/lib/security/headers";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 export async function proxy(request: NextRequest) {
@@ -32,7 +33,10 @@ export async function proxy(request: NextRequest) {
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname.startsWith("/auth/") ||
-    pathname === "/suporte";
+    pathname === "/suporte" ||
+    pathname === "/termos" ||
+    pathname === "/privacidade" ||
+    pathname === "/cookies";
 
   if (user && pathname === "/suporte") {
     return redirectWithCookies(request, "/painel/suporte", supabaseResponse);
@@ -50,7 +54,7 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(request, "/painel", supabaseResponse);
   }
 
-  return supabaseResponse;
+  return withSecurityHeaders(supabaseResponse);
 }
 
 function redirectWithCookies(
@@ -64,7 +68,12 @@ function redirectWithCookies(
   supabaseResponse.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set(cookie);
   });
-  return redirectResponse;
+  return withSecurityHeaders(redirectResponse);
+}
+
+function withSecurityHeaders(response: NextResponse): NextResponse {
+  applySecurityHeaders(response.headers);
+  return response;
 }
 
 export const config = {

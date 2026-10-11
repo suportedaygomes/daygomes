@@ -4,8 +4,9 @@ Templates em HTML para colar no **Supabase Dashboard** → **Authentication** �
 
 ## Antes de colar
 
-1. Confirme que a logo está acessível em produção: `https://daygomes.com.br/logoday.png`  
-   (arquivo em `public/logoday.png`). Se usar outro domínio, troque a URL em todos os `.html`.
+1. Confirme que a logo de e-mail está em produção: `https://daygomes.com.br/logoday-email.jpg`
+   (gerar com: `node -e "require('sharp')('public/logoday.png').resize(520).flatten({background:'#f3eef8'}).jpeg({quality:92,mozjpeg:true}).toFile('public/logoday-email.jpg')"`).
+   Os e-mails transacionais do app usam a mesma URL via `NEXT_PUBLIC_SITE_URL`. Se usar outro domínio, troque a URL em todos os `.html`.
 2. Em **Authentication** → **URL Configuration**, defina **Site URL** (ex.: `https://daygomes.com.br`) e inclua em **Redirect URLs**:
    - `https://daygomes.com.br/login/atualizar-senha`
    - `http://localhost:3000/login/atualizar-senha` (desenvolvimento)

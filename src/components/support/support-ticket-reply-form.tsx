@@ -78,8 +78,8 @@ export function SupportTicketReplyForm({ ticketId }: SupportTicketReplyFormProps
             className="mt-1"
           />
           <span>
-            <strong>Manter em aberto</strong> — o aluno lê a resposta e pode encerrar quando
-            quiser (ou continuar a conversa).
+            <strong>Manter em aberto.</strong> O aluno lê a resposta e pode encerrar quando
+            quiser ou continuar a conversa.
           </span>
         </label>
         <label className="flex items-start gap-2">
@@ -91,7 +91,7 @@ export function SupportTicketReplyForm({ ticketId }: SupportTicketReplyFormProps
             className="mt-1"
           />
           <span>
-            <strong>Encerrar chamado</strong> — finaliza agora; o aluno só consulta o histórico.
+            <strong>Encerrar chamado.</strong> Finaliza agora; o aluno só consulta o histórico.
           </span>
         </label>
       </fieldset>

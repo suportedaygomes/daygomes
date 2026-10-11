@@ -66,7 +66,7 @@ export function MemberEditaisView({ enrollments }: MemberEditaisViewProps) {
               <option value="">Todos os editais</option>
               {enrollments.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.editalTitle} — {item.cargoName}
+                  {item.editalTitle} · {item.cargoName}
                 </option>
               ))}
             </select>
