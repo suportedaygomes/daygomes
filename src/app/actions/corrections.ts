@@ -2,11 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import {
-  claimSubmissionForCorrector,
-  releaseSubmissionToQueue,
-} from "@/lib/corrector/submission-assignment";
+import { claimSubmissionForCorrector } from "@/lib/corrector/submission-assignment";
 import { sendCorrectionNoticeEmail } from "@/lib/email/send-correction-notice-email";
+import {
+  buildRubricFeedbackSummary,
+  computeFinalGrade,
+  validateRubricScores,
+  type RubricScores,
+} from "@/lib/editais/evaluation-rubric";
+import { loadEvaluationRubricForSubmission } from "@/lib/editais/load-evaluation-rubric";
 import {
   revokeImmediateNextPhaseAccess,
   unlockNextPhaseForSubmission,
@@ -14,34 +18,11 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export async function returnSubmissionToCorrectionQueue(submissionId: string) {
-  const { user, profile } = await getCurrentProfile();
-
-  if (!user || !profile || profile.banned) {
-    return { ok: false, message: "Sessão inválida." };
-  }
-
-  if (profile.role !== "corretor" && profile.role !== "admin") {
-    return { ok: false, message: "Acesso negado." };
-  }
-
-  const result = await releaseSubmissionToQueue(submissionId, user.id, profile.role);
-  if (!result.ok) {
-    return result;
-  }
-
-  revalidatePath("/painel");
-  revalidatePath("/painel/correcoes");
-  revalidatePath(`/painel/correcoes/${submissionId}`);
-  revalidatePath(`/painel/correcoes/${submissionId}/anotar`);
-
-  return { ok: true, message: "Atividade devolvida à fila. Outro corretor pode assumir." };
-}
-
 export async function saveCorrection(input: {
   submissionId: string;
-  grade: number;
-  feedback: string;
+  grade?: number;
+  feedback?: string;
+  rubricScores?: RubricScores;
   errorsNotes: string;
   unlockNextPhase: boolean;
   allowResubmit: boolean;
@@ -56,9 +37,33 @@ export async function saveCorrection(input: {
     return { ok: false, message: "Acesso negado." };
   }
 
-  const grade = Number(input.grade);
-  if (!Number.isFinite(grade) || grade < 0 || grade > 1000) {
-    return { ok: false, message: "A nota deve estar entre 0 e 1000." };
+  const rubric = await loadEvaluationRubricForSubmission(input.submissionId);
+
+  let grade: number;
+  let feedback: string;
+  let rubricScores: RubricScores | null = null;
+
+  if (rubric) {
+    if (!input.rubricScores) {
+      return { ok: false, message: "Preencha a nota de cada quesito avaliativo." };
+    }
+    const scoresCheck = validateRubricScores(rubric, input.rubricScores);
+    if (!scoresCheck.ok) {
+      return { ok: false, message: scoresCheck.message };
+    }
+    rubricScores = scoresCheck.normalized;
+    grade = computeFinalGrade(rubric, rubricScores);
+    feedback = buildRubricFeedbackSummary(rubric, rubricScores, grade);
+  } else {
+    const manualGrade = Number(input.grade);
+    if (!Number.isFinite(manualGrade) || manualGrade < 0 || manualGrade > 1000) {
+      return { ok: false, message: "A nota deve estar entre 0 e 1000." };
+    }
+    grade = manualGrade;
+    feedback = (input.feedback ?? "").trim();
+    if (!feedback) {
+      return { ok: false, message: "Informe a descrição da correção." };
+    }
   }
 
   if (!input.unlockNextPhase && !input.allowResubmit) {
@@ -130,8 +135,9 @@ export async function saveCorrection(input: {
     submission_id: submission.id,
     corrector_id: user.id,
     grade,
-    feedback: input.feedback.trim(),
+    feedback,
     errors_notes: input.errorsNotes.trim(),
+    rubric_scores: rubricScores,
     next_phase_unlocked: unlockNextPhase,
     allow_resubmit: allowResubmit,
     updated_at: new Date().toISOString(),

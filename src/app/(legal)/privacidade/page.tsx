@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { LegalDocumentView } from "@/components/legal/legal-document-view";
 import { PRIVACY_POLICY } from "@/lib/legal/documents";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
-  description: "Como a Day Gomes trata dados pessoais (LGPD).",
+  description: `Como a ${SITE_DISPLAY_NAME} trata dados pessoais (LGPD).`,
 };
 
 export default function PrivacidadePage() {

@@ -5,6 +5,32 @@ type SubmissionRef = {
   phase_id: string;
 };
 
+export async function unlockFirstPhaseForEnrollment(
+  client: SupabaseClient,
+  enrollmentId: string,
+  cargoId: string,
+  unlockedBy?: string | null,
+) {
+  const { data: phase1 } = await client
+    .from("edital_phases")
+    .select("id")
+    .eq("cargo_id", cargoId)
+    .eq("phase_number", 1)
+    .maybeSingle();
+
+  if (!phase1) return;
+
+  await client.from("member_phase_access").upsert(
+    {
+      enrollment_id: enrollmentId,
+      phase_id: phase1.id,
+      unlocked_at: new Date().toISOString(),
+      unlocked_by: unlockedBy ?? null,
+    },
+    { onConflict: "enrollment_id,phase_id" },
+  );
+}
+
 export async function findImmediateNextPhaseId(
   client: SupabaseClient,
   phaseId: string,

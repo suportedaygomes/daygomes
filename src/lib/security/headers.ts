@@ -53,6 +53,13 @@ function contentSecurityPolicy(nonce: string): string {
     }
   }
 
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'strict-dynamic'",
+    ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []),
+  ].join(" ");
+
   const directives = [
     "default-src 'self'",
     "base-uri 'self'",
@@ -63,7 +70,7 @@ function contentSecurityPolicy(nonce: string): string {
     "img-src 'self' data: blob: https://*.supabase.co",
     "font-src 'self'",
     "style-src 'self' 'unsafe-inline'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src ${scriptSrc}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
   ];

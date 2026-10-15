@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/lib/roles";
 
@@ -15,17 +16,18 @@ export type ProfileRow = {
   banned: boolean;
 };
 
-export async function getCurrentProfile() {
+export const getCurrentProfile = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { user: null, profile: null };
+  if (userError || !user) {
+    return { user: null, profile: null, profileLoadFailed: false };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, email, full_name, role, cpf, whatsapp, bio, birth_date, avatar_path, banned")
     .eq("id", user.id)
@@ -34,8 +36,9 @@ export async function getCurrentProfile() {
   return {
     user,
     profile: profile as ProfileRow | null,
+    profileLoadFailed: Boolean(profileError),
   };
-}
+});
 
 const LEGACY_AVATAR_PATH = /^[0-9a-f-]{36}\/avatar\./i;
 

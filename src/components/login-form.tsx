@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
 import { InstallPrompt } from "@/components/install-prompt";
 import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -49,15 +48,16 @@ export function LoginForm() {
       return;
     }
 
-    router.push("/painel");
-    router.refresh();
+    // Navegação completa garante cookies de sessão no servidor antes do painel (evita corrida com o proxy).
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- sessão SSR
+    window.location.assign("/painel");
   }
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <p className="text-sm font-semibold tracking-[0.22em] text-purple uppercase">
-          Day Gomes
+          {SITE_DISPLAY_NAME}
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
           Entrar
@@ -80,7 +80,7 @@ export function LoginForm() {
             spellCheck={false}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="h-14 rounded-2xl border border-white/10 bg-field px-4 text-base font-normal text-foreground outline-none transition focus:border-purple focus:ring-4 focus:ring-purple/20"
+            className="h-14 rounded-2xl border border-[color:var(--border-subtle)] bg-field px-4 text-base font-normal text-foreground outline-none transition focus:border-purple focus:ring-4 focus:ring-purple/20"
             placeholder="voce@email.com"
             maxLength={254}
             required
@@ -96,7 +96,7 @@ export function LoginForm() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="h-14 w-full rounded-2xl border border-white/10 bg-field px-4 pr-14 text-base font-normal text-foreground outline-none transition focus:border-purple focus:ring-4 focus:ring-purple/20"
+              className="h-14 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-field px-4 pr-14 text-base font-normal text-foreground outline-none transition focus:border-purple focus:ring-4 focus:ring-purple/20"
               placeholder="Sua senha"
               maxLength={128}
               required
@@ -116,7 +116,7 @@ export function LoginForm() {
         {error ? (
           <p
             role="alert"
-            className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100"
+            className="rounded-2xl border border-[color:var(--alert-error-border)] bg-[color:var(--alert-error-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--alert-error-text)]"
           >
             {error}
           </p>
@@ -132,13 +132,13 @@ export function LoginForm() {
         </button>
 
         <p className="text-center text-sm text-muted">
-          <Link href="/login/recuperar" className="text-purple-light hover:underline">
+          <Link href="/login/recuperar" className="text-purple hover:underline">
             Esqueci minha senha
           </Link>
         </p>
 
         <p className="text-center text-sm text-muted">
-          <Link href="/suporte" className="text-purple-light hover:underline">
+          <Link href="/suporte" className="text-purple hover:underline">
             Precisa de ajuda? Suporte
           </Link>
         </p>
@@ -147,11 +147,11 @@ export function LoginForm() {
 
         <p className="text-center text-xs leading-5 text-muted">
           Ao entrar, você confirma que leu os{" "}
-          <Link href="/termos" className="text-purple-light hover:underline">
+          <Link href="/termos" className="text-purple hover:underline">
             Termos de Uso
           </Link>{" "}
           e a{" "}
-          <Link href="/privacidade" className="text-purple-light hover:underline">
+          <Link href="/privacidade" className="text-purple hover:underline">
             Política de Privacidade
           </Link>
           .

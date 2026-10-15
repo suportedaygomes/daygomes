@@ -1,4 +1,5 @@
 import { escapeHtml } from "@/lib/email/escape-html";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 const DEFAULT_SITE = "https://daygomes.com.br";
 /** Mesmo arquivo do login (`public/logoday.png`, 843×559). Exibido menor para nitidez no mobile. */
@@ -24,7 +25,7 @@ export function transactionalEmailLogoImg(): string {
   const logoUrl = transactionalLogoUrl();
   const w = EMAIL_LOGO_DISPLAY_WIDTH;
   const h = EMAIL_LOGO_DISPLAY_HEIGHT;
-  return `<img src="${escapeHtml(logoUrl)}" width="${w}" height="${h}" alt="Day Gomes" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:${w}px;max-width:100%;height:auto;" />`;
+  return `<img src="${escapeHtml(logoUrl)}" width="${w}" height="${h}" alt="${escapeHtml(SITE_DISPLAY_NAME)}" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:${w}px;max-width:100%;height:auto;" />`;
 }
 
 /** Abertura HTML compartilhada (Supabase Auth e layout transacional). */
@@ -74,7 +75,7 @@ export function transactionalEmailCardClose(): string {
           </tr>
           <tr>
             <td align="center" bgcolor="${EMAIL_PAGE_BG}" style="padding-top:24px;background-color:${EMAIL_PAGE_BG};font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6f6a64;">
-              Day Gomes · <a href="https://daygomes.com.br" style="color:#ab5fd0;text-decoration:none;">daygomes.com.br</a><br />
+              ${escapeHtml(SITE_DISPLAY_NAME)} · <a href="https://daygomes.com.br" style="color:#ab5fd0;text-decoration:none;">daygomes.com.br</a><br />
               <a href="mailto:acesso@daygomes.com.br" style="color:#ab5fd0;text-decoration:none;">acesso@daygomes.com.br</a>
             </td>
           </tr>`;

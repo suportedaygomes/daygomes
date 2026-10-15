@@ -1,4 +1,4 @@
-const CACHE = "day-gomes-v2";
+const CACHE = "day-gomes-v5";
 const PRECACHE = [
   "/offline.html",
   "/logoday.png",
@@ -36,6 +36,14 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));
+    return;
+  }
+
+  const isBrandLogo =
+    url.pathname.startsWith("/logonova") || url.pathname === "/logoday.png";
+
+  if (isBrandLogo) {
+    event.respondWith(fetch(request));
     return;
   }
 

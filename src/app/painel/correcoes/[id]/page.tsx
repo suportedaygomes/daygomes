@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CorrectionForm } from "@/components/editais/correction-form";
+import { EditalAttachmentsPanel } from "@/components/editais/edital-attachments-panel";
+import {
+  listEditalAttachments,
+  resolveEditalIdForSubmission,
+} from "@/lib/editais/attachments";
+import { loadEvaluationRubricForSubmission } from "@/lib/editais/load-evaluation-rubric";
+import type { RubricScores } from "@/lib/editais/evaluation-rubric";
 import { MemberContactCard } from "@/components/painel/member-contact-card";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
@@ -29,8 +36,7 @@ export default async function CorrecaoDetailPage({
         <PainelPage>
           <h1 className="text-3xl font-semibold tracking-tight">Atividade em uso</h1>
           <p className="mt-3 text-muted">
-            Outro corretor já está corrigindo esta atividade. Ela só volta para a fila geral
-            se for devolvida.
+            Outro corretor já está corrigindo esta atividade.
           </p>
           <Link href="/painel/correcoes" className="btn-primary btn-sm mt-6 inline-flex">
             Voltar às correções
@@ -62,9 +68,19 @@ export default async function CorrecaoDetailPage({
 
   const { data: correction } = await supabase
     .from("phase_corrections")
-    .select("grade, feedback, errors_notes, next_phase_unlocked, allow_resubmit")
+    .select(
+      "grade, feedback, errors_notes, rubric_scores, next_phase_unlocked, allow_resubmit",
+    )
     .eq("submission_id", id)
     .maybeSingle();
+
+  const evaluationRubric = await loadEvaluationRubricForSubmission(id);
+  const initialRubricScores =
+    correction?.rubric_scores &&
+    typeof correction.rubric_scores === "object" &&
+    !Array.isArray(correction.rubric_scores)
+      ? (correction.rubric_scores as RubricScores)
+      : null;
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(
     /\/$/,
@@ -76,9 +92,15 @@ export default async function CorrecaoDetailPage({
     correctionUrl,
   });
 
+  const editalId = await resolveEditalIdForSubmission(id);
+  const editalAttachments = editalId ? await listEditalAttachments(editalId) : [];
+
   return (
     <PainelPage>
       <h1 className="text-3xl font-semibold tracking-tight">Corrigir envio</h1>
+      {editalId ? (
+        <EditalAttachmentsPanel editalId={editalId} attachments={editalAttachments} />
+      ) : null}
       {memberContact ? (
         <MemberContactCard
           member={memberContact}
@@ -92,18 +114,19 @@ export default async function CorrecaoDetailPage({
           memberName={member?.full_name ?? "Aluno"}
           phaseTitle={phase?.title ?? "Fase"}
           downloadUrl={`/api/submissions/${id}/download`}
+          evaluationRubric={evaluationRubric}
           initial={
             correction
               ? {
                   grade: correction.grade,
                   feedback: correction.feedback,
                   errorsNotes: correction.errors_notes,
+                  rubricScores: initialRubricScores,
                   nextPhaseUnlocked: correction.next_phase_unlocked,
                   allowResubmit: correction.allow_resubmit,
                 }
               : undefined
           }
-          canReturnToQueue={access.canReturnToQueue}
         />
       </div>
     </PainelPage>

@@ -2,6 +2,8 @@ import { generateTemporaryPassword } from "@/lib/auth/password";
 import { normalizeCpf, isValidCpf } from "@/lib/cpf";
 import { sendAccessEmail } from "@/lib/email/send-access-email";
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
+import { unlockFirstPhaseForEnrollment } from "@/lib/editais/phase-access-unlock";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProvisionResult =
@@ -18,7 +20,7 @@ export async function provisionKiwifyOrder(
   const fullName =
     payload.Customer?.full_name?.trim() ||
     payload.Customer?.first_name?.trim() ||
-    "Aluno Day Gomes";
+    "Aluno";
 
   if (!orderId || !email || !productId) {
     return { ok: false, error: "Payload incompleto." };
@@ -141,6 +143,10 @@ export async function provisionKiwifyOrder(
     enrollmentId = enrollment.id;
   }
 
+  if (enrollmentId) {
+    await unlockFirstPhaseForEnrollment(admin, enrollmentId, mapping.cargo_id);
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const emailResult = await sendAccessEmail({
     to: email,
@@ -154,8 +160,8 @@ export async function provisionKiwifyOrder(
     profile_id: profileId,
     recipient_email: email,
     subject: createdUser
-      ? "Seu acesso ao Day Gomes foi liberado"
-      : "Novo curso liberado no Day Gomes",
+      ? `Seu acesso à ${SITE_DISPLAY_NAME} foi liberado`
+      : `Novo curso liberado na ${SITE_DISPLAY_NAME}`,
     status: emailResult.ok ? "sent" : "failed",
     error_message: emailResult.ok ? null : emailResult.error,
     order_id: orderId,

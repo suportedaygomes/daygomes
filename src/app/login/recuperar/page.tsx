@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export const metadata: Metadata = {
   title: "Recuperar senha",
-  description: "Recupere o acesso à sua conta Day Gomes.",
+  description: `Recupere o acesso à sua conta ${SITE_DISPLAY_NAME}.`,
 };
 
 export default function RecuperarSenhaPage() {

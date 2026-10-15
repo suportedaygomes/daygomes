@@ -40,11 +40,20 @@ export function supportReplyAttachmentKey(
   return `support/${ticketId}/reply-${replyId}.${extension}`;
 }
 
+export function editalAttachmentKey(
+  editalId: string,
+  attachmentId: string,
+  extension: string,
+) {
+  return `editais/${editalId}/${attachmentId}.${extension}`;
+}
+
 export function isR2ObjectKey(path: string) {
   return (
     path.startsWith("avatars/") ||
     path.startsWith("submissions/") ||
-    path.startsWith("support/")
+    path.startsWith("support/") ||
+    path.startsWith("editais/")
   );
 }
 

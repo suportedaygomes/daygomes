@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export type EmailAttachment = {
   filename: string;
@@ -19,7 +20,7 @@ function getFromAddress() {
   return (
     process.env.EMAIL_FROM?.trim() ||
     process.env.RESEND_FROM?.trim() ||
-    "Day Gomes <acesso@daygomes.com.br>"
+    `${SITE_DISPLAY_NAME} <acesso@daygomes.com.br>`
   );
 }
 

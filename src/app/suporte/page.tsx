@@ -3,10 +3,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
 import { SupportRequestForm } from "@/components/support/support-request-form";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export const metadata: Metadata = {
   title: "Suporte",
-  description: "Peça ajuda à equipe Day Gomes.",
+  description: `Peça ajuda à equipe da ${SITE_DISPLAY_NAME}.`,
 };
 
 export default function SuportePublicPage() {
@@ -20,7 +21,7 @@ export default function SuportePublicPage() {
         <Link href="/login" className="relative z-10 mx-auto block w-fit pt-1">
           <Image
             src="/logoday.png"
-            alt="Logotipo Day Gomes"
+            alt={`Logotipo ${SITE_DISPLAY_NAME}`}
             width={843}
             height={559}
             priority

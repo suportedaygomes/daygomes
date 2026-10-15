@@ -3,21 +3,23 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { saveCorrection } from "@/app/actions/corrections";
-import { ReturnToQueueButton } from "@/components/editais/return-to-queue-button";
+import { CorrectionRubricPanel } from "@/components/editais/correction-rubric-panel";
+import type { EditalEvaluationRubric, RubricScores } from "@/lib/editais/evaluation-rubric";
 
 type CorrectionFormProps = {
   submissionId: string;
   memberName: string;
   phaseTitle: string;
   downloadUrl: string | null;
+  evaluationRubric?: EditalEvaluationRubric | null;
   initial?: {
     grade: number | null;
     feedback: string;
     errorsNotes: string;
+    rubricScores?: RubricScores | null;
     nextPhaseUnlocked: boolean;
     allowResubmit: boolean;
   };
-  canReturnToQueue?: boolean;
 };
 
 export function CorrectionForm({
@@ -25,11 +27,16 @@ export function CorrectionForm({
   memberName,
   phaseTitle,
   downloadUrl,
+  evaluationRubric,
   initial,
-  canReturnToQueue = false,
 }: CorrectionFormProps) {
+  const hasRubric = Boolean(evaluationRubric?.quesitos.length);
+
   const [grade, setGrade] = useState(initial?.grade?.toString() ?? "");
   const [feedback, setFeedback] = useState(initial?.feedback ?? "");
+  const [rubricScores, setRubricScores] = useState<RubricScores>(
+    initial?.rubricScores ?? {},
+  );
   const [errorsNotes, setErrorsNotes] = useState(initial?.errorsNotes ?? "");
   const initialUnlock = Boolean(initial?.nextPhaseUnlocked) && !initial?.allowResubmit;
   const initialResubmit = Boolean(initial?.allowResubmit) && !initial?.nextPhaseUnlocked;
@@ -53,8 +60,9 @@ export function CorrectionForm({
 
     const result = await saveCorrection({
       submissionId,
-      grade: Number(grade),
-      feedback,
+      grade: hasRubric ? undefined : Number(grade),
+      feedback: hasRubric ? undefined : feedback,
+      rubricScores: hasRubric ? rubricScores : undefined,
       errorsNotes,
       unlockNextPhase,
       allowResubmit,
@@ -86,35 +94,49 @@ export function CorrectionForm({
             Baixar arquivo original
           </a>
         ) : null}
-        {canReturnToQueue ? <ReturnToQueueButton submissionId={submissionId} /> : null}
       </div>
 
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Nota (0 a 1000)
-        <input
-          type="number"
-          min={0}
-          max={1000}
-          step={0.1}
-          className="field-input"
-          value={grade}
-          onChange={(event) => setGrade(event.target.value)}
-          required
-        />
-      </label>
+      {hasRubric && evaluationRubric ? (
+        <>
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Descrição da correção (quesitos e notas)
+            <CorrectionRubricPanel
+              rubric={evaluationRubric}
+              scores={rubricScores}
+              onScoresChange={setRubricScores}
+            />
+          </label>
+        </>
+      ) : (
+        <>
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Nota (0 a 1000)
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              step={0.1}
+              className="field-input"
+              value={grade}
+              onChange={(event) => setGrade(event.target.value)}
+              required
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-medium">
+            Descrição da correção
+            <textarea
+              className="field-input min-h-28 resize-y py-3"
+              value={feedback}
+              onChange={(event) => setFeedback(event.target.value)}
+              required
+            />
+          </label>
+        </>
+      )}
 
       <label className="flex flex-col gap-2 text-sm font-medium">
-        Descrição da correção
-        <textarea
-          className="field-input min-h-28 resize-y py-3"
-          value={feedback}
-          onChange={(event) => setFeedback(event.target.value)}
-          required
-        />
-      </label>
-
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Erros apontados
+        Comentários técnicos do professor
         <textarea
           className="field-input min-h-28 resize-y py-3"
           value={errorsNotes}

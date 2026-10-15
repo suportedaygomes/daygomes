@@ -92,7 +92,7 @@ export function MemberPhaseCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-purple">Fase {phaseNumber}</p>
         <p className="text-xs text-muted">
-          Prazo: {deadline.toLocaleString("pt-BR")}
+          Prazo para envio: {deadline.toLocaleString("pt-BR")}
         </p>
       </div>
       <h3 className="text-lg font-semibold">{title}</h3>
@@ -149,7 +149,9 @@ export function MemberPhaseCard({
         <div className="rounded-xl border border-white/10 bg-field/80 p-4 text-sm">
           <p><strong>Nota:</strong> {correction.grade ?? "—"}</p>
           <p className="mt-2"><strong>Feedback:</strong> {correction.feedback || "—"}</p>
-          <p className="mt-2"><strong>Erros apontados:</strong> {correction.errorsNotes || "—"}</p>
+          <p className="mt-2">
+            <strong>Comentários técnicos do professor:</strong> {correction.errorsNotes || "—"}
+          </p>
           {corrector ? (
             <CorrectorPublicInline
               fullName={corrector.fullName}
@@ -158,7 +160,7 @@ export function MemberPhaseCard({
             />
           ) : (
             <p className="mt-3 border-t border-white/10 pt-3 text-xs text-muted">
-              Corrigido pela equipe Day Gomes
+              Corrigido pela equipe da Professora Day Gomes
             </p>
           )}
           {submissionId ? <MembroCorrecaoCardActions submissionId={submissionId} /> : null}

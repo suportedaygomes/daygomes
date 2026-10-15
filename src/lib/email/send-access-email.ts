@@ -1,6 +1,7 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
 import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 type SendAccessEmailInput = {
   to: string;
@@ -17,13 +18,13 @@ export async function sendAccessEmail(input: SendAccessEmailInput): Promise<Send
   const greeting = escapeHtml(input.fullName.trim() || "Olá");
 
   const subject = isNewAccount
-    ? "Seu acesso ao Day Gomes foi liberado"
-    : "Novo curso liberado no Day Gomes";
+    ? `Seu acesso à ${SITE_DISPLAY_NAME} foi liberado`
+    : `Novo curso liberado na ${SITE_DISPLAY_NAME}`;
 
   const intro =
     source === "admin"
-      ? "Sua conta na plataforma Day Gomes foi criada."
-      : "Sua compra na Kiwify foi confirmada e o acesso à plataforma Day Gomes já está liberado.";
+      ? `Sua conta na plataforma ${SITE_DISPLAY_NAME} foi criada.`
+      : `Sua compra na Kiwify foi confirmada e o acesso à plataforma ${SITE_DISPLAY_NAME} já está liberado.`;
 
   const productLine = input.productName
     ? `<p style="margin:0 0 12px;">Curso/produto: <strong style="color:#f6f3ef;">${escapeHtml(input.productName)}</strong></p>`
@@ -43,7 +44,7 @@ export async function sendAccessEmail(input: SendAccessEmailInput): Promise<Send
 
   const html = buildTransactionalEmail({
     eyebrow: isNewAccount ? "Acesso liberado" : "Novo conteúdo",
-    title: isNewAccount ? "Bem-vindo(a) ao Day Gomes" : "Novo curso disponível",
+    title: isNewAccount ? `Bem-vindo(a) à ${SITE_DISPLAY_NAME}` : "Novo curso disponível",
     bodyHtml,
     button: { href: input.loginUrl, label: "Entrar na plataforma" },
     footerNote: "Se você não reconhece este aviso, ignore este e-mail.",
@@ -65,7 +66,7 @@ export async function sendRefundNoticeEmail(input: {
       <p style="margin:0 0 12px;">Olá,</p>
       <p style="margin:0 0 12px;">Identificamos o <strong style="color:#f6f3ef;">reembolso</strong> da sua compra na Kiwify.</p>
       ${productLine}
-      <p style="margin:0 0 12px;">O acesso ao conteúdo vinculado a essa compra foi encerrado na plataforma Day Gomes.</p>
+      <p style="margin:0 0 12px;">O acesso ao conteúdo vinculado a essa compra foi encerrado na plataforma ${SITE_DISPLAY_NAME}.</p>
       <p style="margin:0;">Se você acredita que isso é um engano, entre em contato: acesso@daygomes.com.br</p>`;
 
   const html = buildTransactionalEmail({
@@ -77,7 +78,7 @@ export async function sendRefundNoticeEmail(input: {
 
   return sendEmail({
     to: input.to,
-    subject: "Acesso ao curso encerrado — Day Gomes",
+    subject: `Acesso ao curso encerrado — ${SITE_DISPLAY_NAME}`,
     html,
   });
 }

@@ -36,7 +36,7 @@ export function CorrectorPublicCard({ corrector, avatarUrl }: CorrectorPublicCar
             {corrector.bio}
           </p>
         ) : (
-          <p className="mt-2 text-sm text-muted">Equipe de correção Day Gomes</p>
+          <p className="mt-2 text-sm text-muted">Equipe de correção da Professora Day Gomes</p>
         )}
       </div>
     </section>

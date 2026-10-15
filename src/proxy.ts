@@ -7,10 +7,14 @@ import {
 } from "@/lib/security/headers";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
+const useStrictCsp = process.env.NODE_ENV === "production";
+
 export async function proxy(request: NextRequest) {
-  const nonce = createRequestNonce();
+  const nonce = useStrictCsp ? createRequestNonce() : "";
   const requestHeaders = new Headers(request.headers);
-  applySecurityRequestHeaders(requestHeaders, nonce);
+  if (useStrictCsp) {
+    applySecurityRequestHeaders(requestHeaders, nonce);
+  }
   const forward = { headers: requestHeaders };
 
   let supabaseResponse = NextResponse.next({ request: forward });
@@ -63,6 +67,9 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(request, "/painel", supabaseResponse, nonce);
   }
 
+  if (!useStrictCsp) {
+    return supabaseResponse;
+  }
   return withSecurityHeaders(supabaseResponse, nonce);
 }
 
@@ -78,6 +85,9 @@ function redirectWithCookies(
   supabaseResponse.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set(cookie);
   });
+  if (!useStrictCsp) {
+    return redirectResponse;
+  }
   return withSecurityHeaders(redirectResponse, nonce);
 }
 

@@ -99,7 +99,9 @@ export default async function MembroCorrecaoDetalhePage({
           <strong>Nota:</strong> {parseSubmissionGrade(correction?.grade) ?? "—"}
         </p>
         <p><strong>Feedback:</strong> {correction?.feedback || "—"}</p>
-        <p><strong>Erros apontados (resumo):</strong> {correction?.errors_notes || "—"}</p>
+        <p>
+          <strong>Comentários técnicos do professor:</strong> {correction?.errors_notes || "—"}
+        </p>
       </section>
 
       <MembroCorrecaoActions submissionId={id} />

@@ -13,6 +13,7 @@ import {
   readStoredTheme,
   type SiteTheme,
   THEME_STORAGE_KEY,
+  writeThemeCookie,
 } from "@/lib/theme/storage";
 
 type ThemeContextValue = {
@@ -23,13 +24,20 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<SiteTheme>("dark");
+export function ThemeProvider({
+  children,
+  initialTheme = "dark",
+}: {
+  children: React.ReactNode;
+  initialTheme?: SiteTheme;
+}) {
+  const [theme, setThemeState] = useState<SiteTheme>(initialTheme);
 
   useEffect(() => {
     const stored = readStoredTheme();
     setThemeState(stored);
     applyThemeToDocument(stored);
+    writeThemeCookie(stored);
   }, []);
 
   const setTheme = useCallback((next: SiteTheme) => {
@@ -40,6 +48,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore */
     }
+    writeThemeCookie(next);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -51,6 +60,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* ignore */
       }
+      writeThemeCookie(next);
       return next;
     });
   }, []);

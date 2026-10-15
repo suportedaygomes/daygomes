@@ -5,6 +5,10 @@ import {
   isSubmittedForCorrection,
 } from "@/lib/editais/correction-finalized";
 import {
+  normalizeSubmissionPeriodDays,
+  resolveMemberPhaseDeadlineAt,
+} from "@/lib/editais/member-phase-deadline";
+import {
   daysUntilDeadline,
   memberNeedsPhaseSubmission,
 } from "@/lib/editais/phase-submission-pending";
@@ -58,7 +62,7 @@ export async function getMemberDashboardStats(
 
   const { data: enrollments } = await admin
     .from("member_edital_enrollments")
-    .select("id, cargo_id, editais(title), edital_cargos(name)")
+    .select("id, cargo_id, editais(title, submission_period_days), edital_cargos(name)")
     .eq("member_id", memberId);
 
   const enrollmentSummaries: MemberEnrollmentSummary[] = [];
@@ -82,9 +86,12 @@ export async function getMemberDashboardStats(
 
     const { data: accessRows } = await admin
       .from("member_phase_access")
-      .select("phase_id")
+      .select("phase_id, unlocked_at")
       .eq("enrollment_id", enrollment.id);
 
+    const unlockedAtByPhase = new Map(
+      (accessRows ?? []).map((row) => [row.phase_id, row.unlocked_at as string]),
+    );
     const phaseIds = (accessRows ?? []).map((row) => row.phase_id);
     const { data: phases } = phaseIds.length
       ? await admin
@@ -119,12 +126,21 @@ export async function getMemberDashboardStats(
       (corrections ?? []).map((item) => [item.submission_id, item]),
     );
 
+    const phasesInCargo = (allCargoPhases ?? []).length;
+    const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
+
     let enrollmentSubmissions = 0;
     let enrollmentOpen = 0;
     let nextDeadline: Date | null = null;
 
     for (const phase of phases ?? []) {
-      const deadlineMs = new Date(phase.deadline_at).getTime();
+      const phaseDeadlineAt = resolveMemberPhaseDeadlineAt({
+        unlockedAt: unlockedAtByPhase.get(phase.id),
+        submissionPeriodDays,
+        phasesInCargo,
+        legacyDeadlineAt: phase.deadline_at,
+      });
+      const deadlineMs = new Date(phaseDeadlineAt).getTime();
       const isOpen = deadlineMs > now;
 
       const submission = submissionByPhase.get(phase.id);
@@ -175,7 +191,7 @@ export async function getMemberDashboardStats(
       if (isOpen && memberNeedsPhaseSubmission(submission ?? null, allowResubmit)) {
         pendingActionCount += 1;
 
-        const daysLeft = daysUntilDeadline(phase.deadline_at, now);
+        const daysLeft = daysUntilDeadline(phaseDeadlineAt, now);
         if (daysLeft >= 0 && daysLeft <= 7) {
           notifications.push({
             id: `deadline-${phase.id}`,
@@ -183,7 +199,7 @@ export async function getMemberDashboardStats(
             title: allowResubmit ? "Reenvio liberado" : "Prazo se aproximando",
             body: `${phase.title}: ${daysLeft === 0 ? "encerra hoje" : `faltam ${daysLeft} dia(s)`}`,
             href: "/painel/editais",
-            sortAt: phase.deadline_at,
+            sortAt: phaseDeadlineAt,
           });
         }
 
@@ -200,7 +216,7 @@ export async function getMemberDashboardStats(
       }
 
       if (isOpen) {
-        const deadline = new Date(phase.deadline_at);
+        const deadline = new Date(phaseDeadlineAt);
         if (!nextDeadline || deadline < nextDeadline) {
           nextDeadline = deadline;
         }

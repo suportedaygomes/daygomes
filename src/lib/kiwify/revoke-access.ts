@@ -1,4 +1,5 @@
 import { sendRefundNoticeEmail } from "@/lib/email/send-access-email";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -125,7 +126,7 @@ export async function revokeKiwifyOrder(payload: KiwifyOrderWebhook): Promise<Re
   await admin.from("kiwify_access_emails").insert({
     profile_id: profileId,
     recipient_email: email,
-    subject: "Acesso ao curso encerrado — Day Gomes",
+    subject: `Acesso ao curso encerrado — ${SITE_DISPLAY_NAME}`,
     status: emailResult.ok ? "sent" : "failed",
     error_message: emailResult.ok ? null : emailResult.error,
     order_id: orderId,

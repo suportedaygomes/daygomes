@@ -40,7 +40,7 @@ function replyAttachmentHtml(attachment: ReplyAttachment): string {
   const base64 = attachment.buffer.toString("base64");
   return `${note}
       <p style="margin:0 0 12px;">
-        <img src="data:${attachment.mime};base64,${base64}" alt="Imagem enviada pela equipe Day Gomes" width="480" style="display:block;max-width:100%;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.12);" />
+        <img src="data:${attachment.mime};base64,${base64}" alt="Imagem enviada pela equipe da Professora Day Gomes" width="480" style="display:block;max-width:100%;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.12);" />
       </p>`;
 }
 

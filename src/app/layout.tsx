@@ -1,14 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
-import Script from "next/script";
-import { CSP_NONCE_HEADER } from "@/lib/security/headers";
+import { cookies } from "next/headers";
 import { Outfit } from "next/font/google";
-import { PwaRegister } from "@/components/pwa-register";
-import { ThemeProvider } from "@/components/theme/theme-provider";
-import { THEME_STORAGE_KEY } from "@/lib/theme/storage";
+import { AppProviders } from "@/components/app-providers";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
+import { parseThemeCookie, THEME_STORAGE_KEY, type SiteTheme } from "@/lib/theme/storage";
 import "./globals.css";
-
-const themeBootstrapScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");if(t==="light"){document.documentElement.setAttribute("data-theme","light");document.documentElement.style.colorScheme="light";}}catch(e){}})();`;
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -17,16 +13,20 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: "Day Gomes",
-    template: "%s · Day Gomes",
+    default: SITE_DISPLAY_NAME,
+    template: `%s · ${SITE_DISPLAY_NAME}`,
   },
-  description: "App Day Gomes para celular, tablet e computador.",
-  applicationName: "Day Gomes",
+  description: `App ${SITE_DISPLAY_NAME} para celular, tablet e computador.`,
+  applicationName: SITE_DISPLAY_NAME,
   robots: { index: false, follow: false },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Day Gomes",
+    title: SITE_DISPLAY_NAME,
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
   },
   formatDetection: {
     telephone: false,
@@ -47,18 +47,20 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const nonce = (await headers()).get(CSP_NONCE_HEADER) ?? undefined;
+  const cookieStore = await cookies();
+  const initialTheme: SiteTheme = parseThemeCookie(
+    cookieStore.get(THEME_STORAGE_KEY)?.value,
+  );
 
   return (
-    <html lang="pt-BR" className={`${outfit.variable} h-full antialiased`} suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      className={`${outfit.variable} h-full antialiased`}
+      data-theme={initialTheme === "light" ? "light" : undefined}
+      suppressHydrationWarning
+    >
       <body className="min-h-full bg-background text-foreground">
-        <Script id="theme-bootstrap" strategy="beforeInteractive" nonce={nonce}>
-          {themeBootstrapScript}
-        </Script>
-        <ThemeProvider>
-          {children}
-          <PwaRegister />
-        </ThemeProvider>
+        <AppProviders initialTheme={initialTheme}>{children}</AppProviders>
       </body>
     </html>
   );

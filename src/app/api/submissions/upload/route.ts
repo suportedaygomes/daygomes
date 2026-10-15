@@ -7,6 +7,11 @@ import {
   submissionObjectKey,
   submissionPreviewPdfKey,
 } from "@/lib/r2/storage";
+import {
+  isMemberPhaseDeadlineExpired,
+  normalizeSubmissionPeriodDays,
+  resolveMemberPhaseDeadlineAt,
+} from "@/lib/editais/member-phase-deadline";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
 
   const { data: enrollment } = await supabase
     .from("member_edital_enrollments")
-    .select("id, member_id, cargo_id")
+    .select("id, member_id, cargo_id, editais(submission_period_days)")
     .eq("id", enrollmentId)
     .eq("member_id", user.id)
     .maybeSingle();
@@ -42,7 +47,7 @@ export async function POST(request: Request) {
 
   const { data: access } = await supabase
     .from("member_phase_access")
-    .select("id")
+    .select("id, unlocked_at")
     .eq("enrollment_id", enrollmentId)
     .eq("phase_id", phaseId)
     .maybeSingle();
@@ -62,7 +67,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Fase inválida." }, { status: 400 });
   }
 
-  if (new Date(phase.deadline_at) < new Date()) {
+  const admin = createAdminClient();
+  const { count: phasesInCargo } = await admin
+    .from("edital_phases")
+    .select("*", { count: "exact", head: true })
+    .eq("cargo_id", enrollment.cargo_id);
+
+  const editalRow = Array.isArray(enrollment.editais)
+    ? enrollment.editais[0]
+    : enrollment.editais;
+  const submissionPeriodDays = normalizeSubmissionPeriodDays(editalRow?.submission_period_days);
+
+  const deadlineAt = resolveMemberPhaseDeadlineAt({
+    unlockedAt: access.unlocked_at,
+    submissionPeriodDays,
+    phasesInCargo: phasesInCargo ?? 0,
+    legacyDeadlineAt: phase.deadline_at,
+  });
+
+  if (isMemberPhaseDeadlineExpired(deadlineAt)) {
     return NextResponse.json({ error: "O prazo desta fase já encerrou." }, { status: 400 });
   }
 

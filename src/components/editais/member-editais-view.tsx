@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { EditalAttachmentsPanel } from "@/components/editais/edital-attachments-panel";
+import type { EditalAttachmentView } from "@/lib/editais/attachments-shared";
 import { MemberPhaseCard } from "@/components/editais/member-phase-card";
 
 export type MemberEnrollmentView = {
   id: string;
+  editalId: string;
   editalTitle: string;
   cargoName: string;
+  attachments: EditalAttachmentView[];
   phasesTotal: number;
   averageGrade: number | null;
   phases: Array<{
@@ -90,6 +94,10 @@ export function MemberEditaisView({ enrollments }: MemberEditaisViewProps) {
               </p>
             ) : null}
           </div>
+          <EditalAttachmentsPanel
+            editalId={enrollment.editalId}
+            attachments={enrollment.attachments}
+          />
           <div className="grid gap-4">
             {enrollment.phases.map((phase) => (
               <MemberPhaseCard

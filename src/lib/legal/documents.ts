@@ -9,7 +9,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "1",
     title: "1. Quem somos e o que estes termos regulam",
     paragraphs: [
-      "Estes Termos de Uso disciplinam o acesso e a utilização da plataforma digital Day Gomes, disponível em daygomes.com.br e em seus subdomínios ou aplicativo progressivo (PWA), destinada ao acompanhamento de editais, envio de atividades, correções, comunicação com a equipe e demais funcionalidades educacionais oferecidas pela Day Gomes.",
+      "Estes Termos de Uso disciplinam o acesso e a utilização da plataforma digital Professora Day Gomes, disponível em daygomes.com.br e em seus subdomínios ou aplicativo progressivo (PWA), destinada ao acompanhamento de editais, envio de atividades, correções, comunicação com a equipe e demais funcionalidades educacionais oferecidas pela Professora Day Gomes.",
       "Ao criar conta, entrar na plataforma ou utilizar qualquer serviço disponibilizado, você declara que leu, compreendeu e concorda com estes Termos e com a Política de Privacidade. Se não concordar, não utilize a plataforma.",
     ],
   },
@@ -18,8 +18,8 @@ export const TERMS_OF_USE: LegalSection[] = [
     title: "2. Elegibilidade e cadastro",
     paragraphs: [
       "O uso da plataforma exige capacidade civil para contratar ou autorização de representante legal, quando aplicável. As informações fornecidas no cadastro (nome, e-mail, CPF quando solicitado, WhatsApp, data de nascimento e demais campos) devem ser verdadeiras, completas e atualizadas.",
-      "Você é responsável por manter a confidencialidade da senha e por todas as ações realizadas na conta. Notifique imediatamente a equipe Day Gomes em caso de uso não autorizado ou suspeita de violação de segurança, pelo e-mail acesso@daygomes.com.br.",
-      "A Day Gomes pode recusar, suspender ou encerrar cadastros que violem estes Termos, a legislação aplicável ou que apresentem indícios de fraude, compartilhamento indevido de credenciais ou conduta abusiva.",
+      "Você é responsável por manter a confidencialidade da senha e por todas as ações realizadas na conta. Notifique imediatamente a equipe da Professora Day Gomes em caso de uso não autorizado ou suspeita de violação de segurança, pelo e-mail acesso@daygomes.com.br.",
+      "A Professora Day Gomes pode recusar, suspender ou encerrar cadastros que violem estes Termos, a legislação aplicável ou que apresentem indícios de fraude, compartilhamento indevido de credenciais ou conduta abusiva.",
     ],
   },
   {
@@ -28,7 +28,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     paragraphs: [
       "A plataforma permite, conforme o perfil de acesso (membro, corretor ou administrador), participar de editais e cargos vinculados, enviar arquivos de atividades por fase, acompanhar prazos, receber correções e notas, visualizar feedback dos corretores, interagir com suporte e, quando aplicável, gerenciar usuários e conteúdos.",
       "Parte do acesso pode ser liberada mediante compra em parceiros (por exemplo, integração com a Kiwify) ou por cadastro realizado pela administração. Os direitos de uso são pessoais e intransferíveis, salvo disposição expressa em contrato ou comunicado oficial.",
-      "A Day Gomes trabalha para manter a plataforma disponível e segura, mas não garante funcionamento ininterrupto. Manutenções, atualizações ou falhas de terceiros (hospedagem, internet, provedores de e-mail ou armazenamento) podem causar indisponibilidade temporária.",
+      "A Professora Day Gomes trabalha para manter a plataforma disponível e segura, mas não garante funcionamento ininterrupto. Manutenções, atualizações ou falhas de terceiros (hospedagem, internet, provedores de e-mail ou armazenamento) podem causar indisponibilidade temporária.",
     ],
   },
   {
@@ -36,7 +36,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     title: "4. Envio de atividades e regras dos editais",
     paragraphs: [
       "Cada edital, cargo e fase possui regras próprias de prazo, formato de arquivo e critérios de correção, informados na interface da plataforma. O envio fora do prazo, em formato não aceito ou em desacordo com as instruções pode impedir a correção ou a contagem de nota, conforme as regras do edital.",
-      "Ao enviar arquivos, você declara ser titular dos direitos necessários ou possuir autorização para o conteúdo enviado, e concede à Day Gomes licença não exclusiva para armazenar, processar, exibir ao corretor designado e utilizar o material exclusivamente para fins de correção, registro acadêmico e melhoria do serviço, nos limites da lei.",
+      "Ao enviar arquivos, você declara ser titular dos direitos necessários ou possuir autorização para o conteúdo enviado, e concede à Professora Day Gomes licença não exclusiva para armazenar, processar, exibir ao corretor designado e utilizar o material exclusivamente para fins de correção, registro acadêmico e melhoria do serviço, nos limites da lei.",
       "É proibido enviar conteúdo ilegal, difamatório, que viole direitos de terceiros, que contenha malware ou que tenha sido plagiado de forma a configurar violação de direitos autorais ou de concurso.",
     ],
   },
@@ -44,7 +44,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "5",
     title: "5. Correções, notas e comunicações",
     paragraphs: [
-      "As correções são realizadas por corretores habilitados ou pela equipe administrativa. As notas, comentários e orientações (incluindo liberação de reenvio ou de fase seguinte) têm caráter educacional e vinculam-se às regras de cada edital. A Day Gomes não assegura resultado em concursos públicos ou seleções externas.",
+      "As correções são realizadas por corretores habilitados ou pela equipe administrativa. As notas, comentários e orientações (incluindo liberação de reenvio ou de fase seguinte) têm caráter educacional e vinculam-se às regras de cada edital. A Professora Day Gomes não assegura resultado em concursos públicos ou seleções externas.",
       "Comunicações operacionais (correção disponível, prazos, acesso liberado, respostas de suporte) podem ser enviadas por e-mail e exibidas no painel. É sua responsabilidade manter um e-mail válido e acompanhar as mensagens.",
     ],
   },
@@ -60,8 +60,8 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "7",
     title: "7. Propriedade intelectual",
     paragraphs: [
-      "Marcas, logotipos, layout, textos institucionais, vídeos, materiais didáticos e software da plataforma são de titularidade da Day Gomes ou de licenciantes, protegidos pela legislação de propriedade intelectual. Não é permitida cópia, engenharia reversa, revenda ou exploração comercial não autorizada.",
-      "O conteúdo que você envia permanece de sua responsabilidade; a licença concedida à Day Gomes limita-se ao necessário para prestação do serviço.",
+      "Marcas, logotipos, layout, textos institucionais, vídeos, materiais didáticos e software da plataforma são de titularidade da Professora Day Gomes ou de licenciantes, protegidos pela legislação de propriedade intelectual. Não é permitida cópia, engenharia reversa, revenda ou exploração comercial não autorizada.",
+      "O conteúdo que você envia permanece de sua responsabilidade; a licença concedida à Professora Day Gomes limita-se ao necessário para prestação do serviço.",
     ],
   },
   {
@@ -77,14 +77,14 @@ export const TERMS_OF_USE: LegalSection[] = [
     title: "9. Pagamentos, reembolsos e encerramento de acesso",
     paragraphs: [
       "Quando o acesso for adquirido por meio de parceiros de pagamento, aplicam-se também os termos do parceiro e a política de reembolso da compra. Reembolsos reconhecidos pelo parceiro podem implicar revogação do acesso aos conteúdos vinculados na plataforma.",
-      "A Day Gomes pode alterar planos, editais disponíveis e funcionalidades, comunicando usuários quando a mudança for relevante para o uso contratado.",
+      "A Professora Day Gomes pode alterar planos, editais disponíveis e funcionalidades, comunicando usuários quando a mudança for relevante para o uso contratado.",
     ],
   },
   {
     id: "10",
     title: "10. Limitação de responsabilidade",
     paragraphs: [
-      "Na extensão permitida pela lei, a Day Gomes não responde por lucros cessantes, danos indiretos ou decisões tomadas pelo usuário com base em simulados ou correções. A responsabilidade total por falha comprovada do serviço limita-se, quando cabível, ao valor pago pelo usuário pelo acesso ao produto diretamente relacionado ao evento, nos últimos doze meses.",
+      "Na extensão permitida pela lei, a Professora Day Gomes não responde por lucros cessantes, danos indiretos ou decisões tomadas pelo usuário com base em simulados ou correções. A responsabilidade total por falha comprovada do serviço limita-se, quando cabível, ao valor pago pelo usuário pelo acesso ao produto diretamente relacionado ao evento, nos últimos doze meses.",
       "Nada nestes Termos exclui direitos irrenunciáveis do consumidor previstos no Código de Defesa do Consumidor, quando aplicável.",
     ],
   },
@@ -116,15 +116,15 @@ export const PRIVACY_POLICY: LegalSection[] = [
     id: "1",
     title: "1. Introdução",
     paragraphs: [
-      "Esta Política de Privacidade descreve como a Day Gomes trata dados pessoais de usuários da plataforma, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais, LGPD) e normas complementares.",
-      "Ao utilizar a plataforma, você confia determinados dados à Day Gomes. Levamos a sério essa confiança e adotamos medidas técnicas e organizacionais proporcionais aos riscos.",
+      "Esta Política de Privacidade descreve como a Professora Day Gomes trata dados pessoais de usuários da plataforma, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais, LGPD) e normas complementares.",
+      "Ao utilizar a plataforma, você confia determinados dados à Professora Day Gomes. Levamos a sério essa confiança e adotamos medidas técnicas e organizacionais proporcionais aos riscos.",
     ],
   },
   {
     id: "2",
     title: "2. Controlador e canal de comunicação",
     paragraphs: [
-      "O controlador dos dados pessoais tratados nesta plataforma é a Day Gomes, responsável pela operação do site daygomes.com.br.",
+      "O controlador dos dados pessoais tratados nesta plataforma é a Professora Day Gomes, responsável pela operação do site daygomes.com.br.",
       "Pedidos relacionados à privacidade e aos direitos do titular devem ser enviados para acesso@daygomes.com.br, com assunto \"Privacidade / LGPD\". Responderemos nos prazos legais.",
     ],
   },
@@ -137,7 +137,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
       "Dados de uso educacional: vínculos a editais e cargos, fases liberadas, arquivos enviados (redações e anexos), metadados de envio (data, tipo de arquivo, tamanho), correções, notas, comentários de corretores, marcações em documentos e histórico de status.",
       "Dados de suporte: conteúdo de chamados, e-mail e WhatsApp informados, imagens anexadas e respostas da equipe.",
       "Dados de comunicação: envio de e-mails transacionais (correção, prazos, acesso, suporte) por meio do provedor Resend, com endereço de destino e conteúdo da mensagem.",
-      "Dados de pagamento e integração: quando a compra ocorre via Kiwify ou integração similar, recebemos identificadores e status da transação necessários para liberar ou revogar acesso; dados completos de cartão não são armazenados pela Day Gomes no ambiente da plataforma.",
+      "Dados de pagamento e integração: quando a compra ocorre via Kiwify ou integração similar, recebemos identificadores e status da transação necessários para liberar ou revogar acesso; dados completos de cartão não são armazenados pela Professora Day Gomes no ambiente da plataforma.",
       "Dados técnicos: endereço IP, tipo de navegador, registros de erro e informações de dispositivo, coletados de forma automática na hospedagem e nos serviços de infraestrutura, para segurança e diagnóstico.",
     ],
   },
@@ -158,7 +158,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
     paragraphs: [
       "Utilizamos fornecedores que tratam dados em nosso nome, sob contratos ou termos que exigem proteção adequada, entre eles: Supabase (banco de dados e autenticação), hospedagem (Vercel ou equivalente), Cloudflare R2 ou serviço similar (armazenamento de arquivos), Resend (e-mail transacional) e Kiwify (quando a compra é realizada por esse canal).",
       "Corretores e administradores autorizados acessam apenas os dados necessários à correção, ao suporte ou à gestão de editais, conforme permissões do perfil.",
-      "Não vendemos dados pessoais. Podemos divulgar informações se exigido por lei, ordem judicial ou autoridade competente, ou para proteger direitos da Day Gomes e de usuários em situação de emergência de segurança.",
+      "Não vendemos dados pessoais. Podemos divulgar informações se exigido por lei, ordem judicial ou autoridade competente, ou para proteger direitos da Professora Day Gomes e de usuários em situação de emergência de segurança.",
     ],
   },
   {

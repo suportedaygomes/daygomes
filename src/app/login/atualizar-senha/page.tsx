@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { UpdatePasswordForm } from "@/components/update-password-form";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export const metadata: Metadata = {
   title: "Nova senha",
-  description: "Defina uma nova senha para sua conta Day Gomes.",
+  description: `Defina uma nova senha para sua conta ${SITE_DISPLAY_NAME}.`,
 };
 
 export default function AtualizarSenhaPage() {

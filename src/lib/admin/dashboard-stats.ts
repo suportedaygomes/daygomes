@@ -1,4 +1,8 @@
 import { listPendingSubmissionsForStaff } from "@/lib/corrector/pending-queue";
+import {
+  normalizeSubmissionPeriodDays,
+  resolveMemberPhaseDeadlineAt,
+} from "@/lib/editais/member-phase-deadline";
 import { memberNeedsPhaseSubmission } from "@/lib/editais/phase-submission-pending";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -21,18 +25,22 @@ export type AdminMissedDeadlineRow = {
 type AccessRow = {
   enrollment_id: string;
   phase_id: string;
+  unlocked_at: string;
   member_edital_enrollments: {
     member_id: string;
     cargo_id: string;
     edital_cargos: {
       name: string;
-      editais: { title: string } | { title: string }[] | null;
+      editais:
+        | { title: string; submission_period_days: number | null }
+        | { title: string; submission_period_days: number | null }[]
+        | null;
     } | null;
   } | null;
   edital_phases: {
     title: string;
     phase_number: number;
-    deadline_at: string;
+    deadline_at: string | null;
     cargo_id: string;
   } | null;
 };
@@ -132,12 +140,13 @@ export async function getAdminDashboardStats(
     `
       enrollment_id,
       phase_id,
+      unlocked_at,
       member_edital_enrollments (
         member_id,
         cargo_id,
         edital_cargos (
           name,
-          editais ( title )
+          editais ( title, submission_period_days )
         )
       ),
       edital_phases (
@@ -176,6 +185,7 @@ export async function getAdminDashboardStats(
   );
 
   const missedDeadlines: AdminMissedDeadlineRow[] = [];
+  const phasesCountByCargo = new Map<string, number>();
 
   for (const row of rows) {
     const enrollment = unwrap(row.member_edital_enrollments);
@@ -184,7 +194,26 @@ export async function getAdminDashboardStats(
     if (phase.cargo_id !== enrollment.cargo_id) continue;
     if (!activeMemberById.has(enrollment.member_id)) continue;
 
-    const deadlineMs = new Date(phase.deadline_at).getTime();
+    let phasesInCargo = phasesCountByCargo.get(enrollment.cargo_id);
+    if (phasesInCargo === undefined) {
+      const { count } = await admin
+        .from("edital_phases")
+        .select("*", { count: "exact", head: true })
+        .eq("cargo_id", enrollment.cargo_id);
+      phasesInCargo = count ?? 0;
+      phasesCountByCargo.set(enrollment.cargo_id, phasesInCargo);
+    }
+
+    const cargo = enrollment.edital_cargos;
+    const edital = unwrap(cargo?.editais);
+    const phaseDeadlineAt = resolveMemberPhaseDeadlineAt({
+      unlockedAt: row.unlocked_at,
+      submissionPeriodDays: normalizeSubmissionPeriodDays(edital?.submission_period_days),
+      phasesInCargo,
+      legacyDeadlineAt: phase.deadline_at,
+    });
+
+    const deadlineMs = new Date(phaseDeadlineAt).getTime();
     if (deadlineMs > now) continue;
 
     const submission = submissionByKey.get(`${row.enrollment_id}:${row.phase_id}`);
@@ -194,9 +223,6 @@ export async function getAdminDashboardStats(
 
     if (!memberNeedsPhaseSubmission(submission, allowResubmit)) continue;
 
-    const cargo = enrollment.edital_cargos;
-    const edital = unwrap(cargo?.editais);
-
     missedDeadlines.push({
       memberId: enrollment.member_id,
       memberName: activeMemberById.get(enrollment.member_id) ?? "Membro",
@@ -204,7 +230,7 @@ export async function getAdminDashboardStats(
       cargoName: cargo?.name ?? "—",
       phaseTitle: phase.title,
       phaseNumber: phase.phase_number,
-      deadlineAt: phase.deadline_at,
+      deadlineAt: phaseDeadlineAt,
     });
   }
 

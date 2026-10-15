@@ -1,5 +1,9 @@
 import { sendPhaseDeadlineReminderEmail } from "@/lib/email/send-phase-deadline-reminder-email";
 import {
+  normalizeSubmissionPeriodDays,
+  resolveMemberPhaseDeadlineAt,
+} from "@/lib/editais/member-phase-deadline";
+import {
   daysUntilDeadline,
   memberNeedsPhaseSubmission,
   reminderKindForDaysLeft,
@@ -9,18 +13,22 @@ import { createAdminClient } from "@/lib/supabase/admin";
 type AccessRow = {
   enrollment_id: string;
   phase_id: string;
+  unlocked_at: string;
   member_edital_enrollments: {
     member_id: string;
     cargo_id: string;
     edital_cargos: {
       name: string;
-      editais: { title: string } | { title: string }[] | null;
+      editais:
+        | { title: string; submission_period_days: number | null }
+        | { title: string; submission_period_days: number | null }[]
+        | null;
     } | null;
   } | null;
   edital_phases: {
     title: string;
     phase_number: number;
-    deadline_at: string;
+    deadline_at: string | null;
     cargo_id: string;
   } | null;
 };
@@ -52,12 +60,13 @@ export async function runPhaseDeadlineReminders(): Promise<RunPhaseDeadlineRemin
       `
       enrollment_id,
       phase_id,
+      unlocked_at,
       member_edital_enrollments (
         member_id,
         cargo_id,
         edital_cargos (
           name,
-          editais ( title )
+          editais ( title, submission_period_days )
         )
       ),
       edital_phases (
@@ -125,6 +134,7 @@ export async function runPhaseDeadlineReminders(): Promise<RunPhaseDeadlineRemin
     : { data: [] };
 
   const profileById = new Map((profiles ?? []).map((item) => [item.id, item]));
+  const phasesCountByCargo = new Map<string, number>();
 
   for (const row of rows) {
     const enrollment = unwrap(row.member_edital_enrollments);
@@ -139,13 +149,32 @@ export async function runPhaseDeadlineReminders(): Promise<RunPhaseDeadlineRemin
       continue;
     }
 
-    const deadlineMs = new Date(phase.deadline_at).getTime();
+    let phasesInCargo = phasesCountByCargo.get(enrollment.cargo_id);
+    if (phasesInCargo === undefined) {
+      const { count } = await admin
+        .from("edital_phases")
+        .select("*", { count: "exact", head: true })
+        .eq("cargo_id", enrollment.cargo_id);
+      phasesInCargo = count ?? 0;
+      phasesCountByCargo.set(enrollment.cargo_id, phasesInCargo);
+    }
+
+    const cargo = enrollment.edital_cargos;
+    const edital = unwrap(cargo?.editais);
+    const phaseDeadlineAt = resolveMemberPhaseDeadlineAt({
+      unlockedAt: row.unlocked_at,
+      submissionPeriodDays: normalizeSubmissionPeriodDays(edital?.submission_period_days),
+      phasesInCargo,
+      legacyDeadlineAt: phase.deadline_at,
+    });
+
+    const deadlineMs = new Date(phaseDeadlineAt).getTime();
     if (deadlineMs <= now) {
       skipped += 1;
       continue;
     }
 
-    const daysLeft = daysUntilDeadline(phase.deadline_at, now);
+    const daysLeft = daysUntilDeadline(phaseDeadlineAt, now);
     const kind = reminderKindForDaysLeft(daysLeft);
     if (!kind) {
       skipped += 1;
@@ -176,9 +205,6 @@ export async function runPhaseDeadlineReminders(): Promise<RunPhaseDeadlineRemin
       continue;
     }
 
-    const cargo = enrollment.edital_cargos;
-    const edital = unwrap(cargo?.editais);
-
     const emailResult = await sendPhaseDeadlineReminderEmail({
       to: email,
       fullName: profile?.full_name ?? "",
@@ -186,7 +212,7 @@ export async function runPhaseDeadlineReminders(): Promise<RunPhaseDeadlineRemin
       cargoName: cargo?.name ?? "—",
       phaseTitle: phase.title,
       phaseNumber: phase.phase_number,
-      deadlineAt: new Date(phase.deadline_at),
+      deadlineAt: new Date(phaseDeadlineAt),
       reminderKind: kind,
       isResubmit: Boolean(submission && allowResubmit),
       editaisUrl,

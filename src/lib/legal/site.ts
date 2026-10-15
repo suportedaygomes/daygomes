@@ -1,4 +1,6 @@
-export const LEGAL_SITE_NAME = "Day Gomes";
+/** Nome exibido no app, e-mails e páginas institucionais. */
+export const SITE_DISPLAY_NAME = "Professora Day Gomes";
+export const LEGAL_SITE_NAME = SITE_DISPLAY_NAME;
 export const LEGAL_SITE_URL = "https://daygomes.com.br";
 export const LEGAL_CONTACT_EMAIL = "acesso@daygomes.com.br";
 export const LEGAL_PRIVACY_EMAIL = "acesso@daygomes.com.br";

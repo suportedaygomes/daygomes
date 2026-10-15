@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -47,7 +48,7 @@ export function ForgotPasswordForm() {
     <div className="flex flex-col gap-8">
       <div>
         <p className="text-sm font-semibold tracking-[0.22em] text-purple uppercase">
-          Day Gomes
+          {SITE_DISPLAY_NAME}
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
           Recuperar senha
@@ -65,7 +66,7 @@ export function ForgotPasswordForm() {
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="h-14 rounded-2xl border border-white/10 bg-field px-4 text-base font-normal text-foreground outline-none transition focus:border-purple focus:ring-4 focus:ring-purple/20"
+            className="h-14 rounded-2xl border border-[color:var(--border-subtle)] bg-field px-4 text-base font-normal text-foreground outline-none transition focus:border-purple focus:ring-4 focus:ring-purple/20"
             placeholder="voce@email.com"
             required
           />

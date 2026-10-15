@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 export function UpdatePasswordForm() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export function UpdatePasswordForm() {
     <div className="flex flex-col gap-8">
       <div>
         <p className="text-sm font-semibold tracking-[0.22em] text-purple uppercase">
-          Day Gomes
+          {SITE_DISPLAY_NAME}
         </p>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
           Nova senha
@@ -62,7 +63,7 @@ export function UpdatePasswordForm() {
             autoComplete="new-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="h-14 rounded-2xl border border-white/10 bg-field px-4 text-base outline-none focus:border-purple focus:ring-4 focus:ring-purple/20"
+            className="h-14 rounded-2xl border border-[color:var(--border-subtle)] bg-field px-4 text-base outline-none focus:border-purple focus:ring-4 focus:ring-purple/20"
             minLength={8}
             required
           />
@@ -75,7 +76,7 @@ export function UpdatePasswordForm() {
             autoComplete="new-password"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
-            className="h-14 rounded-2xl border border-white/10 bg-field px-4 text-base outline-none focus:border-purple focus:ring-4 focus:ring-purple/20"
+            className="h-14 rounded-2xl border border-[color:var(--border-subtle)] bg-field px-4 text-base outline-none focus:border-purple focus:ring-4 focus:ring-purple/20"
             minLength={8}
             required
           />

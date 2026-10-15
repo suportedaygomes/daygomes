@@ -11,7 +11,6 @@ export type CorrectionSubmissionAccess =
         status: string;
         assigned_corrector_id: string | null;
       };
-      canReturnToQueue: boolean;
     }
   | { ok: false; code: "not_found" | "locked" };
 
@@ -45,7 +44,6 @@ export async function loadCorrectionSubmissionForStaff(
     return {
       ok: true,
       submission: claim.submission,
-      canReturnToQueue: true,
     };
   }
 
@@ -64,6 +62,5 @@ export async function loadCorrectionSubmissionForStaff(
   return {
     ok: true,
     submission,
-    canReturnToQueue: false,
   };
 }

@@ -43,7 +43,7 @@ export function InstallPrompt() {
           await promptEvent.prompt();
           setPromptEvent(null);
         }}
-        className="h-12 w-full rounded-2xl border border-white/15 text-sm font-medium text-foreground transition hover:border-purple/60 hover:bg-white/5"
+        className="h-12 w-full rounded-2xl border border-[color:var(--border-subtle)] text-sm font-medium text-foreground transition hover:border-purple/60 hover:bg-black/[0.04]"
       >
         Instalar app
       </button>

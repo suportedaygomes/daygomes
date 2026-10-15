@@ -3,8 +3,13 @@ import { MemberEditaisView, type MemberEnrollmentView } from "@/components/edita
 import { PainelPage } from "@/components/painel/painel-page";
 import { getAvatarPublicUrl, getCurrentProfile } from "@/lib/auth/profile";
 import { getCorrectorPublicProfilesByIds } from "@/lib/corrector/batch-public-profiles";
+import { listEditalAttachmentsByEditalIds } from "@/lib/editais/attachments";
 import { computeEditalAverageByPhases } from "@/lib/editais/edital-phase-average";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
+import {
+  normalizeSubmissionPeriodDays,
+  resolveMemberPhaseDeadlineAt,
+} from "@/lib/editais/member-phase-deadline";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -21,8 +26,11 @@ export default async function MembroEditaisPage() {
   const { url: supabaseUrl } = getSupabasePublicEnv();
   const { data: enrollments } = await supabase
     .from("member_edital_enrollments")
-    .select("id, cargo_id, editais(title), edital_cargos(name)")
+    .select("id, edital_id, cargo_id, editais(title, submission_period_days), edital_cargos(name)")
     .eq("member_id", user.id);
+
+  const editalIds = [...new Set((enrollments ?? []).map((row) => row.edital_id))];
+  const attachmentsByEdital = await listEditalAttachmentsByEditalIds(editalIds);
 
   const views: MemberEnrollmentView[] = [];
 
@@ -36,9 +44,12 @@ export default async function MembroEditaisPage() {
 
     const { data: accessRows } = await supabase
       .from("member_phase_access")
-      .select("phase_id")
+      .select("phase_id, unlocked_at")
       .eq("enrollment_id", enrollment.id);
 
+    const unlockedAtByPhase = new Map(
+      (accessRows ?? []).map((row) => [row.phase_id, row.unlocked_at as string]),
+    );
     const phaseIds = (accessRows ?? []).map((row) => row.phase_id);
     const { data: phases } = phaseIds.length
       ? await supabase
@@ -81,6 +92,9 @@ export default async function MembroEditaisPage() {
       .eq("cargo_id", enrollment.cargo_id)
       .order("phase_number");
 
+    const phasesInCargo = (allCargoPhases ?? []).length;
+    const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
+
     const { average: averageGrade, phasesTotal } = computeEditalAverageByPhases(
       allCargoPhases ?? [],
       submissions ?? [],
@@ -93,8 +107,10 @@ export default async function MembroEditaisPage() {
 
     views.push({
       id: enrollment.id,
+      editalId: enrollment.edital_id,
       editalTitle: edital?.title ?? "Edital",
       cargoName: cargo?.name ?? "—",
+      attachments: attachmentsByEdital.get(enrollment.edital_id) ?? [],
       phasesTotal,
       averageGrade,
       phases: (phases ?? []).map((phase) => {
@@ -112,7 +128,12 @@ export default async function MembroEditaisPage() {
           phaseNumber: phase.phase_number,
           title: phase.title,
           description: phase.description,
-          deadlineAt: phase.deadline_at,
+          deadlineAt: resolveMemberPhaseDeadlineAt({
+            unlockedAt: unlockedAtByPhase.get(phase.id),
+            submissionPeriodDays,
+            phasesInCargo,
+            legacyDeadlineAt: phase.deadline_at,
+          }),
           submissionId: submission?.id ?? null,
           submissionStatus: submission?.status ?? null,
           allowResubmit: correction?.allow_resubmit ?? false,
@@ -152,7 +173,8 @@ export default async function MembroEditaisPage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Meus editais</h1>
         <p className="mt-2 text-muted">
-          Envie cada fase liberada dentro do prazo. A próxima fase só abre após correção.
+          Cada fase liberada tem um prazo próprio (dias do edital divididos entre as fases). A
+          próxima só abre após a correção.
         </p>
       </div>
 

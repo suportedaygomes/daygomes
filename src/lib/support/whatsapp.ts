@@ -1,3 +1,4 @@
+import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 import { formatTicketProtocol } from "@/lib/support/protocol";
 
 export function buildWhatsAppUrl(phoneDigits: string, message: string) {
@@ -12,7 +13,7 @@ export function supportReplyWhatsAppMessage(input: {
 }) {
   const protocol = formatTicketProtocol(input.ticketId);
   return (
-    `Olá! Seu chamado de suporte na Day Gomes (protocolo ${protocol}) foi respondido pela nossa equipe. ` +
+    `Olá! Seu chamado de suporte na ${SITE_DISPLAY_NAME} (protocolo ${protocol}) foi respondido pela nossa equipe. ` +
     `Confira a resposta no painel: ${input.ticketUrl}`
   );
 }
@@ -23,7 +24,7 @@ export function correctionWhatsAppMessage(input: {
 }) {
   const protocol = formatTicketProtocol(input.submissionId);
   return (
-    `Olá! Sua atividade na Day Gomes (protocolo ${protocol}) foi corrigida. ` +
+    `Olá! Sua atividade na ${SITE_DISPLAY_NAME} (protocolo ${protocol}) foi corrigida. ` +
     `Veja nota e marcações no painel: ${input.correctionUrl}`
   );
 }
