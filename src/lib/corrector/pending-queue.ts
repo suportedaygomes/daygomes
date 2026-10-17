@@ -1,6 +1,8 @@
 import type { ProfileRow } from "@/lib/auth/profile";
 import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
 import { unwrapSingle } from "@/lib/corrector/submission-row-utils";
+import { activityKindShortLabel, cargoDisplayName } from "@/lib/editais/activity-kind";
+import type { ActivityKind } from "@/lib/editais/activity-kind";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type PendingSubmissionListRow = {
@@ -38,7 +40,7 @@ export async function listPendingSubmissionsForStaff(
   const { data: rows, error } = await admin
     .from("phase_submissions")
     .select(
-      `id, member_id, status, assigned_corrector_id, submitted_at, ${submissionMemberProfileEmbed}, edital_phases(title, phase_number, deadline_at), member_edital_enrollments!phase_submissions_enrollment_id_fkey(edital_id, cargo_id, editais(title), edital_cargos(name))`,
+      `id, member_id, status, assigned_corrector_id, submitted_at, ${submissionMemberProfileEmbed}, edital_phases(title, phase_number, deadline_at, activity_kind, edital_cargos(id, name, edital_id, editais(title))), member_edital_enrollments!phase_submissions_enrollment_id_fkey(edital_id)`,
     )
     .in("status", ["enviado", "em_correcao"])
     .order("submitted_at", { ascending: true });
@@ -68,8 +70,12 @@ export async function listPendingSubmissionsForStaff(
     const member = unwrapSingle(row.profiles);
     const phase = unwrapSingle(row.edital_phases);
     const enrollment = unwrapSingle(row.member_edital_enrollments);
-    const edital = enrollment ? unwrapSingle(enrollment.editais) : null;
-    const cargo = enrollment ? unwrapSingle(enrollment.edital_cargos) : null;
+    const cargo = phase ? unwrapSingle(phase.edital_cargos) : null;
+    const edital = cargo ? unwrapSingle(cargo.editais) : null;
+    const activityKind = (phase?.activity_kind as ActivityKind | undefined) ?? "dissertativa";
+    const cargoName = cargo?.name
+      ? cargoDisplayName(cargo.name, activityKind)
+      : activityKindShortLabel(activityKind);
 
     return {
       id: row.id,
@@ -78,10 +84,10 @@ export async function listPendingSubmissionsForStaff(
       assigned_corrector_id: row.assigned_corrector_id,
       submitted_at: row.submitted_at,
       memberName: member?.full_name ?? "Aluno",
-      editalId: enrollment?.edital_id ?? "",
+      editalId: enrollment?.edital_id ?? cargo?.edital_id ?? "",
       editalTitle: edital?.title ?? "Edital",
-      cargoId: enrollment?.cargo_id ?? "",
-      cargoName: cargo?.name ?? "Cargo",
+      cargoId: cargo?.id ?? "",
+      cargoName,
       phaseTitle: phase?.title ?? "Fase",
       phaseNumber: phase?.phase_number ?? null,
       phaseDeadlineAt: phase?.deadline_at ?? "",

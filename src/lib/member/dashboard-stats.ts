@@ -62,7 +62,7 @@ export async function getMemberDashboardStats(
 
   const { data: enrollments } = await admin
     .from("member_edital_enrollments")
-    .select("id, cargo_id, editais(title, submission_period_days), edital_cargos(name)")
+    .select("id, edital_id, created_at, editais(title, submission_period_days)")
     .eq("member_id", memberId);
 
   const enrollmentSummaries: MemberEnrollmentSummary[] = [];
@@ -78,33 +78,29 @@ export async function getMemberDashboardStats(
     const edital = Array.isArray(enrollment.editais)
       ? enrollment.editais[0]
       : enrollment.editais;
-    const cargo = Array.isArray(enrollment.edital_cargos)
-      ? enrollment.edital_cargos[0]
-      : enrollment.edital_cargos;
     const editalTitle = edital?.title ?? "Edital";
-    const cargoName = cargo?.name ?? "—";
+    const cargoName = "Todos os cargos";
 
-    const { data: accessRows } = await admin
-      .from("member_phase_access")
-      .select("phase_id, unlocked_at")
-      .eq("enrollment_id", enrollment.id);
+    const { data: editalCargos } = await admin
+      .from("edital_cargos")
+      .select("id")
+      .eq("edital_id", enrollment.edital_id);
 
-    const unlockedAtByPhase = new Map(
-      (accessRows ?? []).map((row) => [row.phase_id, row.unlocked_at as string]),
-    );
-    const phaseIds = (accessRows ?? []).map((row) => row.phase_id);
-    const { data: phases } = phaseIds.length
+    const cargoIds = (editalCargos ?? []).map((row) => row.id);
+    const { data: phases } = cargoIds.length
       ? await admin
           .from("edital_phases")
-          .select("id, phase_number, title, deadline_at")
-          .in("id", phaseIds)
+          .select("id, cargo_id, activity_kind, phase_number, title, deadline_at")
+          .in("cargo_id", cargoIds)
+          .order("phase_number")
       : { data: [] };
 
-    const { data: allCargoPhases } = await admin
-      .from("edital_phases")
-      .select("id")
-      .eq("cargo_id", enrollment.cargo_id)
-      .order("phase_number");
+    const allCargoPhases = phases ?? [];
+    const phasesInTrackByKey = new Map<string, number>();
+    for (const phase of allCargoPhases) {
+      const key = `${phase.cargo_id}:${phase.activity_kind}`;
+      phasesInTrackByKey.set(key, (phasesInTrackByKey.get(key) ?? 0) + 1);
+    }
 
     const { data: submissions } = await admin
       .from("phase_submissions")
@@ -126,7 +122,6 @@ export async function getMemberDashboardStats(
       (corrections ?? []).map((item) => [item.submission_id, item]),
     );
 
-    const phasesInCargo = (allCargoPhases ?? []).length;
     const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
 
     let enrollmentSubmissions = 0;
@@ -134,10 +129,13 @@ export async function getMemberDashboardStats(
     let nextDeadline: Date | null = null;
 
     for (const phase of phases ?? []) {
+      const trackKey = `${phase.cargo_id}:${phase.activity_kind}`;
+      const phasesInTrack = phasesInTrackByKey.get(trackKey) ?? 1;
       const phaseDeadlineAt = resolveMemberPhaseDeadlineAt({
-        unlockedAt: unlockedAtByPhase.get(phase.id),
+        enrolledAt: enrollment.created_at,
+        phaseNumber: phase.phase_number,
         submissionPeriodDays,
-        phasesInCargo,
+        phasesInCargo: phasesInTrack,
         legacyDeadlineAt: phase.deadline_at,
       });
       const deadlineMs = new Date(phaseDeadlineAt).getTime();

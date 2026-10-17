@@ -3,8 +3,11 @@ import { MemberEditaisView, type MemberEnrollmentView } from "@/components/edita
 import { PainelPage } from "@/components/painel/painel-page";
 import { getAvatarPublicUrl, getCurrentProfile } from "@/lib/auth/profile";
 import { getCorrectorPublicProfilesByIds } from "@/lib/corrector/batch-public-profiles";
+import type { ActivityKind } from "@/lib/editais/activity-kind";
+import { cargoDisplayName } from "@/lib/editais/activity-kind";
 import { listEditalAttachmentsByEditalIds } from "@/lib/editais/attachments";
 import { computeEditalAverageByPhases } from "@/lib/editais/edital-phase-average";
+import { correctionsRemaining, normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
 import {
   normalizeSubmissionPeriodDays,
@@ -26,11 +29,28 @@ export default async function MembroEditaisPage() {
   const { url: supabaseUrl } = getSupabasePublicEnv();
   const { data: enrollments } = await supabase
     .from("member_edital_enrollments")
-    .select("id, edital_id, cargo_id, editais(title, submission_period_days), edital_cargos(name)")
+    .select("id, edital_id, correction_quota, created_at, editais(title, submission_period_days)")
     .eq("member_id", user.id);
 
   const editalIds = [...new Set((enrollments ?? []).map((row) => row.edital_id))];
   const attachmentsByEdital = await listEditalAttachmentsByEditalIds(editalIds);
+
+  const { data: cargos } = editalIds.length
+    ? await admin
+        .from("edital_cargos")
+        .select("id, edital_id, name, offers_dissertativa, offers_estudo_caso, sort_order")
+        .in("edital_id", editalIds)
+        .order("sort_order")
+    : { data: [] };
+
+  const cargoIds = (cargos ?? []).map((c) => c.id);
+  const { data: allPhases } = cargoIds.length
+    ? await admin
+        .from("edital_phases")
+        .select("id, cargo_id, activity_kind, phase_number, title, description, deadline_at")
+        .in("cargo_id", cargoIds)
+        .order("phase_number")
+    : { data: [] };
 
   const views: MemberEnrollmentView[] = [];
 
@@ -38,26 +58,6 @@ export default async function MembroEditaisPage() {
     const edital = Array.isArray(enrollment.editais)
       ? enrollment.editais[0]
       : enrollment.editais;
-    const cargo = Array.isArray(enrollment.edital_cargos)
-      ? enrollment.edital_cargos[0]
-      : enrollment.edital_cargos;
-
-    const { data: accessRows } = await supabase
-      .from("member_phase_access")
-      .select("phase_id, unlocked_at")
-      .eq("enrollment_id", enrollment.id);
-
-    const unlockedAtByPhase = new Map(
-      (accessRows ?? []).map((row) => [row.phase_id, row.unlocked_at as string]),
-    );
-    const phaseIds = (accessRows ?? []).map((row) => row.phase_id);
-    const { data: phases } = phaseIds.length
-      ? await supabase
-          .from("edital_phases")
-          .select("id, phase_number, title, description, deadline_at")
-          .in("id", phaseIds)
-          .order("phase_number")
-      : { data: [] };
 
     const { data: submissions } = await admin
       .from("phase_submissions")
@@ -86,17 +86,85 @@ export default async function MembroEditaisPage() {
       (corrections ?? []).map((item) => item.corrector_id).filter(Boolean) as string[],
     );
 
-    const { data: allCargoPhases } = await admin
-      .from("edital_phases")
-      .select("id")
-      .eq("cargo_id", enrollment.cargo_id)
-      .order("phase_number");
-
-    const phasesInCargo = (allCargoPhases ?? []).length;
     const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
+    const correctionQuota = normalizeCorrectionQuota(enrollment.correction_quota);
+    const correctionsUsed = submissions?.length ?? 0;
+    const remaining = correctionsRemaining(correctionQuota, correctionsUsed);
+
+    const editalCargos = (cargos ?? []).filter((c) => c.edital_id === enrollment.edital_id);
+
+    const tracks = editalCargos.flatMap((cargo) => {
+      const kinds: ActivityKind[] = [];
+      if (cargo.offers_dissertativa) kinds.push("dissertativa");
+      if (cargo.offers_estudo_caso) kinds.push("estudo_caso");
+
+      return kinds.map((activityKind) => {
+        const trackPhases = (allPhases ?? []).filter(
+          (p) => p.cargo_id === cargo.id && p.activity_kind === activityKind,
+        );
+        const phasesInTrack = trackPhases.length;
+
+        return {
+          trackKey: `${cargo.id}-${activityKind}`,
+          cargoId: cargo.id,
+          cargoName: cargo.name,
+          activityKind,
+          displayName: cargoDisplayName(cargo.name, activityKind),
+          phases: trackPhases.map((phase) => {
+            const submission = submissionByPhase.get(phase.id);
+            const correction = submission
+              ? correctionBySubmission.get(submission.id)
+              : null;
+            const correctorProfile = correction?.corrector_id
+              ? correctorProfiles.get(correction.corrector_id)
+              : null;
+
+            const quotaBlocksNewUpload =
+              !submission && remaining <= 0 && !correction?.allow_resubmit;
+
+            return {
+              id: phase.id,
+              phaseNumber: phase.phase_number,
+              title: phase.title,
+              description: phase.description,
+              deadlineAt: resolveMemberPhaseDeadlineAt({
+                enrolledAt: enrollment.created_at,
+                phaseNumber: phase.phase_number,
+                submissionPeriodDays,
+                phasesInCargo: phasesInTrack,
+                legacyDeadlineAt: phase.deadline_at,
+              }),
+              submissionId: submission?.id ?? null,
+              submissionStatus: submission?.status ?? null,
+              allowResubmit: correction?.allow_resubmit ?? false,
+              quotaBlocksNewUpload,
+              correction: correction
+                ? {
+                    grade: parseSubmissionGrade(correction.grade),
+                    feedback: correction.feedback,
+                    errorsNotes: correction.errors_notes,
+                    correctorId: correction.corrector_id,
+                  }
+                : null,
+              corrector: correctorProfile
+                ? {
+                    fullName: correctorProfile.fullName,
+                    avatarUrl: getAvatarPublicUrl(supabaseUrl, correctorProfile.avatarPath),
+                    bio: correctorProfile.bio,
+                  }
+                : null,
+            };
+          }),
+        };
+      });
+    });
+
+    const allPhaseRows = (allPhases ?? []).filter((p) =>
+      editalCargos.some((c) => c.id === p.cargo_id),
+    );
 
     const { average: averageGrade, phasesTotal } = computeEditalAverageByPhases(
-      allCargoPhases ?? [],
+      allPhaseRows,
       submissions ?? [],
       (corrections ?? []).map((item) => ({
         submission_id: item.submission_id,
@@ -109,51 +177,13 @@ export default async function MembroEditaisPage() {
       id: enrollment.id,
       editalId: enrollment.edital_id,
       editalTitle: edital?.title ?? "Edital",
-      cargoName: cargo?.name ?? "—",
+      correctionQuota,
+      correctionsUsed,
+      correctionsRemaining: remaining,
       attachments: attachmentsByEdital.get(enrollment.edital_id) ?? [],
       phasesTotal,
       averageGrade,
-      phases: (phases ?? []).map((phase) => {
-        const submission = submissionByPhase.get(phase.id);
-        const correction = submission
-          ? correctionBySubmission.get(submission.id)
-          : null;
-
-        const correctorProfile = correction?.corrector_id
-          ? correctorProfiles.get(correction.corrector_id)
-          : null;
-
-        return {
-          id: phase.id,
-          phaseNumber: phase.phase_number,
-          title: phase.title,
-          description: phase.description,
-          deadlineAt: resolveMemberPhaseDeadlineAt({
-            unlockedAt: unlockedAtByPhase.get(phase.id),
-            submissionPeriodDays,
-            phasesInCargo,
-            legacyDeadlineAt: phase.deadline_at,
-          }),
-          submissionId: submission?.id ?? null,
-          submissionStatus: submission?.status ?? null,
-          allowResubmit: correction?.allow_resubmit ?? false,
-          correction: correction
-            ? {
-                grade: parseSubmissionGrade(correction.grade),
-                feedback: correction.feedback,
-                errorsNotes: correction.errors_notes,
-                correctorId: correction.corrector_id,
-              }
-            : null,
-          corrector: correctorProfile
-            ? {
-                fullName: correctorProfile.fullName,
-                avatarUrl: getAvatarPublicUrl(supabaseUrl, correctorProfile.avatarPath),
-                bio: correctorProfile.bio,
-              }
-            : null,
-        };
-      }),
+      tracks,
     });
   }
 
@@ -162,7 +192,8 @@ export default async function MembroEditaisPage() {
       <PainelPage>
         <h1 className="text-3xl font-semibold tracking-tight">Meus editais</h1>
         <p className="mt-4 text-muted">
-          Você ainda não foi vinculado a nenhum edital. Aguarde o administrador.
+          Você ainda não foi vinculado a nenhuma mentoria. Aguarde o administrador ou a compra na
+          Kiwify.
         </p>
       </PainelPage>
     );
@@ -173,8 +204,8 @@ export default async function MembroEditaisPage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Meus editais</h1>
         <p className="mt-2 text-muted">
-          Cada fase liberada tem um prazo próprio (dias do edital divididos entre as fases). A
-          próxima só abre após a correção.
+          Escolha cargo, modalidade e fase dentro da sua cota. Com 4 envios e 5 fases possíveis, você
+          decide quais 4 enviar; reenvio na mesma fase só quando o corretor liberar.
         </p>
       </div>
 

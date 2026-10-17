@@ -1,3 +1,4 @@
+import type { ActivityKind } from "@/lib/editais/activity-kind";
 import type { EditalEvaluationRubric } from "@/lib/editais/evaluation-rubric";
 
 export type PhaseInput = {
@@ -7,18 +8,22 @@ export type PhaseInput = {
 
 export type PhaseEditInput = PhaseInput & {
   id?: string;
+  activityKind: ActivityKind;
 };
 
 export type CargoInput = {
   name: string;
-  vacancyCount: number;
-  phases: PhaseInput[];
+  offersDissertativa: boolean;
+  offersEstudoCaso: boolean;
+  phasesDissertativa: PhaseInput[];
+  phasesEstudoCaso: PhaseInput[];
 };
 
 export type CargoEditInput = {
   id?: string;
   name: string;
-  vacancyCount: number;
+  offersDissertativa: boolean;
+  offersEstudoCaso: boolean;
   phases: PhaseEditInput[];
 };
 

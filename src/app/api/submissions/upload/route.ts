@@ -8,6 +8,10 @@ import {
   submissionPreviewPdfKey,
 } from "@/lib/r2/storage";
 import {
+  correctionsRemaining,
+  countEnrollmentSubmissionsUsed,
+} from "@/lib/editais/enrollment-quota";
+import {
   isMemberPhaseDeadlineExpired,
   normalizeSubmissionPeriodDays,
   resolveMemberPhaseDeadlineAt,
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
 
   const { data: enrollment } = await supabase
     .from("member_edital_enrollments")
-    .select("id, member_id, cargo_id, editais(submission_period_days)")
+    .select("id, member_id, edital_id, correction_quota, created_at, editais(submission_period_days)")
     .eq("id", enrollmentId)
     .eq("member_id", user.id)
     .maybeSingle();
@@ -45,33 +49,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Inscrição inválida." }, { status: 403 });
   }
 
-  const { data: access } = await supabase
-    .from("member_phase_access")
-    .select("id, unlocked_at")
-    .eq("enrollment_id", enrollmentId)
-    .eq("phase_id", phaseId)
-    .maybeSingle();
-
-  if (!access) {
-    return NextResponse.json({ error: "Esta fase ainda não está liberada." }, { status: 403 });
-  }
-
   const { data: phase } = await supabase
     .from("edital_phases")
-    .select("id, deadline_at, cargo_id")
+    .select("id, deadline_at, cargo_id, activity_kind, phase_number, edital_cargos(edital_id)")
     .eq("id", phaseId)
-    .eq("cargo_id", enrollment.cargo_id)
     .maybeSingle();
 
   if (!phase) {
     return NextResponse.json({ error: "Fase inválida." }, { status: 400 });
   }
 
+  const cargo = Array.isArray(phase.edital_cargos)
+    ? phase.edital_cargos[0]
+    : phase.edital_cargos;
+
+  if (!cargo || cargo.edital_id !== enrollment.edital_id) {
+    return NextResponse.json({ error: "Esta fase não pertence à sua mentoria." }, { status: 403 });
+  }
+
   const admin = createAdminClient();
-  const { count: phasesInCargo } = await admin
+  const { count: phasesInTrack } = await admin
     .from("edital_phases")
     .select("*", { count: "exact", head: true })
-    .eq("cargo_id", enrollment.cargo_id);
+    .eq("cargo_id", phase.cargo_id)
+    .eq("activity_kind", phase.activity_kind);
 
   const editalRow = Array.isArray(enrollment.editais)
     ? enrollment.editais[0]
@@ -79,9 +80,10 @@ export async function POST(request: Request) {
   const submissionPeriodDays = normalizeSubmissionPeriodDays(editalRow?.submission_period_days);
 
   const deadlineAt = resolveMemberPhaseDeadlineAt({
-    unlockedAt: access.unlocked_at,
+    enrolledAt: enrollment.created_at,
+    phaseNumber: phase.phase_number,
     submissionPeriodDays,
-    phasesInCargo: phasesInCargo ?? 0,
+    phasesInCargo: phasesInTrack ?? 0,
     legacyDeadlineAt: phase.deadline_at,
   });
 
@@ -121,6 +123,18 @@ export async function POST(request: Request) {
       }
     } else {
       return NextResponse.json({ error: "Você já enviou esta fase." }, { status: 400 });
+    }
+  } else {
+    const used = await countEnrollmentSubmissionsUsed(enrollmentId);
+    const remaining = correctionsRemaining(enrollment.correction_quota, used);
+    if (remaining <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Você já utilizou todas as correções incluídas na sua mentoria. Escolha outra fase apenas se o corretor liberar reenvio.",
+        },
+        { status: 400 },
+      );
     }
   }
 
@@ -180,7 +194,6 @@ export async function POST(request: Request) {
     const previousPath = existing.storage_path;
     const previousPreview = existing.preview_storage_path;
 
-    const admin = createAdminClient();
     const { error: updateError } = await admin
       .from("phase_submissions")
       .update(row)

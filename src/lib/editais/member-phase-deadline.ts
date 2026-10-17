@@ -50,15 +50,38 @@ export function computeMemberPhaseDeadlineIso(
   return computeMemberPhaseDeadline(unlockedAt, submissionPeriodDays, phasesInCargo).toISOString();
 }
 
+export function computeMemberPhaseDeadlineIsoByPhaseIndex(
+  enrolledAt: string | Date,
+  submissionPeriodDays: number,
+  phasesInTrack: number,
+  phaseNumber: number,
+): string {
+  const startMs = new Date(enrolledAt).getTime();
+  const windowPerPhase = phaseWindowMs(submissionPeriodDays, phasesInTrack);
+  const index = Math.max(1, phaseNumber);
+  return new Date(startMs + index * windowPerPhase).toISOString();
+}
+
 export function resolveMemberPhaseDeadlineAt(params: {
-  unlockedAt: string | null | undefined;
+  unlockedAt?: string | null | undefined;
+  enrolledAt?: string | null | undefined;
+  phaseNumber?: number;
   submissionPeriodDays: number;
   phasesInCargo: number;
   legacyDeadlineAt?: string | null;
 }): string {
-  if (params.unlockedAt && params.phasesInCargo > 0) {
+  const anchor = params.enrolledAt ?? params.unlockedAt;
+  if (anchor && params.phasesInCargo > 0) {
+    if (params.enrolledAt && params.phaseNumber) {
+      return computeMemberPhaseDeadlineIsoByPhaseIndex(
+        params.enrolledAt,
+        params.submissionPeriodDays,
+        params.phasesInCargo,
+        params.phaseNumber,
+      );
+    }
     return computeMemberPhaseDeadlineIso(
-      params.unlockedAt,
+      anchor,
       params.submissionPeriodDays,
       params.phasesInCargo,
     );

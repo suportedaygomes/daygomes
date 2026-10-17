@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { createClient } from "@/lib/supabase/server";
 
 export async function saveKiwifyProductMapping(input: {
   kiwifyProductId: string;
   kiwifyProductName: string;
   editalId: string;
-  cargoId: string;
+  correctionQuota: number;
 }) {
   const { profile } = await getCurrentProfile();
   if (!profile || profile.role !== "admin" || profile.banned) {
@@ -23,23 +24,25 @@ export async function saveKiwifyProductMapping(input: {
   }
 
   const supabase = await createClient();
-  const { data: cargo } = await supabase
-    .from("edital_cargos")
-    .select("id, edital_id")
-    .eq("id", input.cargoId)
-    .eq("edital_id", input.editalId)
+  const { data: edital } = await supabase
+    .from("editais")
+    .select("id")
+    .eq("id", input.editalId)
     .maybeSingle();
 
-  if (!cargo) {
-    return { ok: false, message: "Cargo inválido para o edital selecionado." };
+  if (!edital) {
+    return { ok: false, message: "Edital inválido." };
   }
+
+  const correctionQuota = normalizeCorrectionQuota(input.correctionQuota);
 
   const { error } = await supabase.from("kiwify_product_mappings").upsert(
     {
       kiwify_product_id: kiwifyProductId,
       kiwify_product_name: kiwifyProductName || null,
       edital_id: input.editalId,
-      cargo_id: input.cargoId,
+      cargo_id: null,
+      correction_quota: correctionQuota,
       is_active: true,
       updated_at: new Date().toISOString(),
     },

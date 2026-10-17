@@ -82,7 +82,6 @@ export async function revokeKiwifyOrder(payload: KiwifyOrderWebhook): Promise<Re
         .select("id")
         .eq("member_id", profile.id)
         .eq("edital_id", mapping.edital_id)
-        .eq("cargo_id", mapping.cargo_id)
         .maybeSingle();
 
       enrollmentId = enrollment?.id ?? null;

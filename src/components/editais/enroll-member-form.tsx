@@ -4,17 +4,16 @@ import { FormEvent, useMemo, useState } from "react";
 import { enrollMemberInEdital } from "@/app/actions/editais";
 
 type MemberOption = { id: string; full_name: string | null; email: string | null };
-type CargoOption = { id: string; name: string };
+import { MAX_CORRECTION_QUOTA, MIN_CORRECTION_QUOTA } from "@/lib/editais/enrollment-quota";
 
 type EnrollMemberFormProps = {
   editalId: string;
   members: MemberOption[];
-  cargos: CargoOption[];
 };
 
-export function EnrollMemberForm({ editalId, members, cargos }: EnrollMemberFormProps) {
+export function EnrollMemberForm({ editalId, members }: EnrollMemberFormProps) {
   const [memberId, setMemberId] = useState(members[0]?.id ?? "");
-  const [cargoId, setCargoId] = useState(cargos[0]?.id ?? "");
+  const [correctionQuota, setCorrectionQuota] = useState(4);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -34,7 +33,7 @@ export function EnrollMemberForm({ editalId, members, cargos }: EnrollMemberForm
     setMessage("");
     setPending(true);
 
-    const result = await enrollMemberInEdital({ memberId, editalId, cargoId });
+    const result = await enrollMemberInEdital({ memberId, editalId, correctionQuota });
     if (!result.ok) {
       setError(result.message);
     } else {
@@ -58,13 +57,21 @@ export function EnrollMemberForm({ editalId, members, cargos }: EnrollMemberForm
         </select>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
-        Cargo
-        <select className="field-input" value={cargoId} onChange={(e) => setCargoId(e.target.value)}>
-          {cargos.map((cargo) => (
-            <option key={cargo.id} value={cargo.id}>{cargo.name}</option>
-          ))}
-        </select>
+        Correções incluídas (envios)
+        <input
+          type="number"
+          min={MIN_CORRECTION_QUOTA}
+          max={MAX_CORRECTION_QUOTA}
+          className="field-input max-w-xs"
+          value={correctionQuota}
+          onChange={(e) => setCorrectionQuota(Number(e.target.value))}
+          required
+        />
       </label>
+      <p className="text-xs text-muted">
+        Quantidade de envios que o membro pode fazer nesta mentoria (entre {MIN_CORRECTION_QUOTA} e{" "}
+        {MAX_CORRECTION_QUOTA}), em qualquer cargo ou modalidade.
+      </p>
       {error ? <p className="alert-error">{error}</p> : null}
       {message ? <p className="alert-success">{message}</p> : null}
       <button type="submit" disabled={pending} className="btn-primary">

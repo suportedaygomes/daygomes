@@ -3,7 +3,7 @@ import { normalizeCpf, isValidCpf } from "@/lib/cpf";
 import { sendAccessEmail } from "@/lib/email/send-access-email";
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
-import { unlockFirstPhaseForEnrollment } from "@/lib/editais/phase-access-unlock";
+import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProvisionResult =
@@ -41,7 +41,7 @@ export async function provisionKiwifyOrder(
 
   const { data: mapping } = await admin
     .from("kiwify_product_mappings")
-    .select("id, edital_id, cargo_id, kiwify_product_name, is_active")
+    .select("id, edital_id, correction_quota, kiwify_product_name, is_active")
     .eq("kiwify_product_id", productId)
     .maybeSingle();
 
@@ -115,23 +115,32 @@ export async function provisionKiwifyOrder(
 
   let enrollmentId: string | null = null;
 
+  const correctionQuota = normalizeCorrectionQuota(mapping.correction_quota);
+
   const { data: existingEnrollment } = await admin
     .from("member_edital_enrollments")
-    .select("id")
+    .select("id, correction_quota")
     .eq("member_id", profileId)
     .eq("edital_id", mapping.edital_id)
-    .eq("cargo_id", mapping.cargo_id)
     .maybeSingle();
 
   if (existingEnrollment) {
     enrollmentId = existingEnrollment.id;
+    await admin
+      .from("member_edital_enrollments")
+      .update({
+        correction_quota: Math.max(existingEnrollment.correction_quota ?? 1, correctionQuota),
+        cargo_id: null,
+      })
+      .eq("id", existingEnrollment.id);
   } else {
     const { data: enrollment, error: enrollError } = await admin
       .from("member_edital_enrollments")
       .insert({
         member_id: profileId,
         edital_id: mapping.edital_id,
-        cargo_id: mapping.cargo_id,
+        cargo_id: null,
+        correction_quota: correctionQuota,
       })
       .select("id")
       .single();
@@ -141,10 +150,6 @@ export async function provisionKiwifyOrder(
     }
 
     enrollmentId = enrollment.id;
-  }
-
-  if (enrollmentId) {
-    await unlockFirstPhaseForEnrollment(admin, enrollmentId, mapping.cargo_id);
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

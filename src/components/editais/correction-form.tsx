@@ -17,7 +17,6 @@ type CorrectionFormProps = {
     feedback: string;
     errorsNotes: string;
     rubricScores?: RubricScores | null;
-    nextPhaseUnlocked: boolean;
     allowResubmit: boolean;
   };
 };
@@ -38,10 +37,7 @@ export function CorrectionForm({
     initial?.rubricScores ?? {},
   );
   const [errorsNotes, setErrorsNotes] = useState(initial?.errorsNotes ?? "");
-  const initialUnlock = Boolean(initial?.nextPhaseUnlocked) && !initial?.allowResubmit;
-  const initialResubmit = Boolean(initial?.allowResubmit) && !initial?.nextPhaseUnlocked;
-  const [unlockNextPhase, setUnlockNextPhase] = useState(initialUnlock);
-  const [allowResubmit, setAllowResubmit] = useState(initialResubmit);
+  const [allowResubmit, setAllowResubmit] = useState(Boolean(initial?.allowResubmit));
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -51,11 +47,6 @@ export function CorrectionForm({
     setError("");
     setMessage("");
 
-    if (!unlockNextPhase && !allowResubmit) {
-      setError("Selecione liberar a próxima fase ou liberar reenvio desta fase.");
-      return;
-    }
-
     setPending(true);
 
     const result = await saveCorrection({
@@ -64,7 +55,6 @@ export function CorrectionForm({
       feedback: hasRubric ? undefined : feedback,
       rubricScores: hasRubric ? rubricScores : undefined,
       errorsNotes,
-      unlockNextPhase,
       allowResubmit,
     });
 
@@ -147,34 +137,14 @@ export function CorrectionForm({
 
       <fieldset className="flex flex-col gap-3 rounded-xl border border-[color:var(--border-subtle)] p-4">
         <legend className="px-1 text-sm font-medium">Após a correção</legend>
-        <p className="text-xs text-muted">
-          Selecione uma opção (obrigatório). Próxima fase e reenvio não podem ser marcados juntos.
-        </p>
-        <label className="flex items-start gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={unlockNextPhase}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              setUnlockNextPhase(checked);
-              if (checked) setAllowResubmit(false);
-            }}
-          />
-          <span>Liberar próxima fase para este aluno</span>
-        </label>
         <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"
             className="mt-1"
             checked={allowResubmit}
-            onChange={(event) => {
-              const checked = event.target.checked;
-              setAllowResubmit(checked);
-              if (checked) setUnlockNextPhase(false);
-            }}
+            onChange={(event) => setAllowResubmit(event.target.checked)}
           />
-          <span>Liberar reenvio desta fase (aluno envia de novo aqui)</span>
+          <span>Liberar reenvio desta fase (não consome nova correção da cota)</span>
         </label>
       </fieldset>
 

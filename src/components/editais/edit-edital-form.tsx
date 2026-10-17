@@ -2,15 +2,19 @@
 
 import { FormEvent, useState } from "react";
 import { updateEdital } from "@/app/actions/editais";
+import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
 import { SubmissionPeriodPerCargoHints } from "@/components/editais/submission-period-per-cargo-hints";
+import type { ActivityKind } from "@/lib/editais/activity-kind";
 import type { CargoEditInput, PhaseEditInput } from "@/lib/editais/types";
 
 type InitialCargo = {
   id: string;
   name: string;
-  vacancyCount: number;
+  offersDissertativa: boolean;
+  offersEstudoCaso: boolean;
   phases: {
     id: string;
+    activityKind: ActivityKind;
     title: string;
     description: string;
   }[];
@@ -23,15 +27,17 @@ type Props = {
   initialCargos: InitialCargo[];
 };
 
-const emptyPhase = (): PhaseEditInput => ({
+const emptyPhase = (activityKind: ActivityKind): PhaseEditInput => ({
+  activityKind,
   title: "",
   description: "",
 });
 
 const emptyCargo = (): CargoEditInput => ({
   name: "",
-  vacancyCount: 1,
-  phases: [emptyPhase()],
+  offersDissertativa: true,
+  offersEstudoCaso: false,
+  phases: [emptyPhase("dissertativa")],
 });
 
 function mapInitialCargos(cargos: InitialCargo[]): CargoEditInput[] {
@@ -39,15 +45,30 @@ function mapInitialCargos(cargos: InitialCargo[]): CargoEditInput[] {
   return cargos.map((cargo) => ({
     id: cargo.id,
     name: cargo.name,
-    vacancyCount: cargo.vacancyCount,
+    offersDissertativa: cargo.offersDissertativa,
+    offersEstudoCaso: cargo.offersEstudoCaso,
     phases: cargo.phases.length
       ? cargo.phases.map((phase) => ({
           id: phase.id,
+          activityKind: phase.activityKind,
           title: phase.title,
           description: phase.description,
         }))
-      : [emptyPhase()],
+      : [emptyPhase("dissertativa")],
   }));
+}
+
+function phasesForKind(cargo: CargoEditInput, kind: ActivityKind) {
+  return cargo.phases.filter((p) => p.activityKind === kind);
+}
+
+function setPhasesForKind(
+  cargo: CargoEditInput,
+  kind: ActivityKind,
+  nextKindPhases: PhaseEditInput[],
+): CargoEditInput {
+  const other = cargo.phases.filter((p) => p.activityKind !== kind);
+  return { ...cargo, phases: [...other, ...nextKindPhases.map((p) => ({ ...p, activityKind: kind }))] };
 }
 
 export function EditEditalForm({
@@ -92,8 +113,8 @@ export function EditEditalForm({
       <div>
         <h2 className="panel-title">Editar edital</h2>
         <p className="mt-1 text-sm text-muted">
-          Altere título, cargos e fases a qualquer momento. Remover cargo ou fase com envios ou
-          inscrições não é permitido.
+          Altere título, cargos e fases a qualquer momento. Remover cargo ou fase com envios não é
+          permitido.
         </p>
       </div>
 
@@ -137,7 +158,7 @@ export function EditEditalForm({
       {cargos.map((cargo, cargoIndex) => (
         <section
           key={cargo.id ?? `new-cargo-${cargoIndex}`}
-          className="rounded-2xl border border-white/10 bg-black/20 p-4 flex flex-col gap-4"
+          className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-black/20 p-4"
         >
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-purple">Cargo {cargoIndex + 1}</h3>
@@ -164,90 +185,81 @@ export function EditEditalForm({
                 required
               />
             </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Quantidade de vagas
-              <input
-                type="number"
-                min={1}
-                className="field-input"
-                value={cargo.vacancyCount}
-                onChange={(event) =>
-                  updateCargo(cargoIndex, {
-                    ...cargo,
-                    vacancyCount: Number(event.target.value),
-                  })
-                }
-                required
-              />
-            </label>
+            <div className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
+              <span>Modalidades deste cargo</span>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 font-normal">
+                  <input
+                    type="checkbox"
+                    checked={cargo.offersDissertativa}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      let next = { ...cargo, offersDissertativa: checked };
+                      if (checked && !phasesForKind(cargo, "dissertativa").length) {
+                        next = setPhasesForKind(next, "dissertativa", [emptyPhase("dissertativa")]);
+                      }
+                      if (!checked) {
+                        next = setPhasesForKind(next, "dissertativa", []);
+                      }
+                      updateCargo(cargoIndex, next);
+                    }}
+                  />
+                  Redação dissertativa
+                </label>
+                <label className="flex items-center gap-2 font-normal">
+                  <input
+                    type="checkbox"
+                    checked={cargo.offersEstudoCaso}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      let next = { ...cargo, offersEstudoCaso: checked };
+                      if (checked && !phasesForKind(cargo, "estudo_caso").length) {
+                        next = setPhasesForKind(next, "estudo_caso", [emptyPhase("estudo_caso")]);
+                      }
+                      if (!checked) {
+                        next = setPhasesForKind(next, "estudo_caso", []);
+                      }
+                      updateCargo(cargoIndex, next);
+                    }}
+                  />
+                  Estudo de caso
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-4">
-            {cargo.phases.map((phase, phaseIndex) => (
-              <div
-                key={phase.id ?? `new-phase-${cargoIndex}-${phaseIndex}`}
-                className="rounded-xl border border-white/8 p-3"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold">Fase {phaseIndex + 1}</p>
-                  {cargo.phases.length > 1 ? (
-                    <button
-                      type="button"
-                      className="text-xs text-red-300"
-                      onClick={() =>
-                        updateCargo(cargoIndex, {
-                          ...cargo,
-                          phases: cargo.phases.filter((_, i) => i !== phaseIndex),
-                        })
-                      }
-                    >
-                      Remover fase
-                    </button>
-                  ) : null}
-                </div>
-                <div className="grid gap-3">
-                  <label className="flex flex-col gap-2 text-sm font-medium">
-                    Título
-                    <input
-                      className="field-input"
-                      value={phase.title}
-                      onChange={(event) => {
-                        const phases = [...cargo.phases];
-                        phases[phaseIndex] = { ...phase, title: event.target.value };
-                        updateCargo(cargoIndex, { ...cargo, phases });
-                      }}
-                      required
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-medium">
-                    Descrição
-                    <textarea
-                      className="field-input min-h-24 resize-y py-3"
-                      value={phase.description}
-                      onChange={(event) => {
-                        const phases = [...cargo.phases];
-                        phases[phaseIndex] = { ...phase, description: event.target.value };
-                        updateCargo(cargoIndex, { ...cargo, phases });
-                      }}
-                      required
-                    />
-                  </label>
-                </div>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="btn-secondary btn-sm w-fit"
-              onClick={() =>
-                updateCargo(cargoIndex, {
-                  ...cargo,
-                  phases: [...cargo.phases, emptyPhase()],
-                })
+          {cargo.offersDissertativa ? (
+            <CargoActivityPhasesFields
+              activityKind="dissertativa"
+              phases={phasesForKind(cargo, "dissertativa")}
+              onChange={(phases) =>
+                updateCargo(
+                  cargoIndex,
+                  setPhasesForKind(
+                    cargo,
+                    "dissertativa",
+                    phases.map((p) => ({ ...p, activityKind: "dissertativa" })),
+                  ),
+                )
               }
-            >
-              Adicionar fase
-            </button>
-          </div>
+            />
+          ) : null}
+          {cargo.offersEstudoCaso ? (
+            <CargoActivityPhasesFields
+              activityKind="estudo_caso"
+              phases={phasesForKind(cargo, "estudo_caso")}
+              onChange={(phases) =>
+                updateCargo(
+                  cargoIndex,
+                  setPhasesForKind(
+                    cargo,
+                    "estudo_caso",
+                    phases.map((p) => ({ ...p, activityKind: "estudo_caso" })),
+                  ),
+                )
+              }
+            />
+          ) : null}
         </section>
       ))}
 

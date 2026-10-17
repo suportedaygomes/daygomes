@@ -122,7 +122,6 @@ export default async function CorrecaoDetailPage({
                   feedback: correction.feedback,
                   errorsNotes: correction.errors_notes,
                   rubricScores: initialRubricScores,
-                  nextPhaseUnlocked: correction.next_phase_unlocked,
                   allowResubmit: correction.allow_resubmit,
                 }
               : undefined

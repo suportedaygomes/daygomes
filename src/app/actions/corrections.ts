@@ -11,10 +11,6 @@ import {
   type RubricScores,
 } from "@/lib/editais/evaluation-rubric";
 import { loadEvaluationRubricForSubmission } from "@/lib/editais/load-evaluation-rubric";
-import {
-  revokeImmediateNextPhaseAccess,
-  unlockNextPhaseForSubmission,
-} from "@/lib/editais/phase-access-unlock";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,7 +20,6 @@ export async function saveCorrection(input: {
   feedback?: string;
   rubricScores?: RubricScores;
   errorsNotes: string;
-  unlockNextPhase: boolean;
   allowResubmit: boolean;
 }) {
   const { user, profile } = await getCurrentProfile();
@@ -66,22 +61,6 @@ export async function saveCorrection(input: {
     }
   }
 
-  if (!input.unlockNextPhase && !input.allowResubmit) {
-    return {
-      ok: false,
-      message: "Selecione liberar a próxima fase ou liberar reenvio desta fase.",
-    };
-  }
-
-  if (input.unlockNextPhase && input.allowResubmit) {
-    return {
-      ok: false,
-      message:
-        "Escolha apenas uma opção: liberar a próxima fase ou permitir reenvio desta fase.",
-    };
-  }
-
-  const unlockNextPhase = input.unlockNextPhase;
   const allowResubmit = input.allowResubmit;
 
   const admin = createAdminClient();
@@ -138,7 +117,7 @@ export async function saveCorrection(input: {
     feedback,
     errors_notes: input.errorsNotes.trim(),
     rubric_scores: rubricScores,
-    next_phase_unlocked: unlockNextPhase,
+    next_phase_unlocked: false,
     allow_resubmit: allowResubmit,
     updated_at: new Date().toISOString(),
   };
@@ -157,7 +136,6 @@ export async function saveCorrection(input: {
       .delete()
       .eq("enrollment_id", submission.enrollment_id)
       .eq("phase_id", submission.phase_id);
-    await revokeImmediateNextPhaseAccess(admin, submission);
   }
 
   await admin
@@ -167,12 +145,6 @@ export async function saveCorrection(input: {
       assigned_corrector_id: user.id,
     })
     .eq("id", submission.id);
-
-  if (unlockNextPhase) {
-    await unlockNextPhaseForSubmission(admin, submission, user.id);
-  } else if (!allowResubmit) {
-    await revokeImmediateNextPhaseAccess(admin, submission);
-  }
 
   revalidatePath("/painel");
   revalidatePath("/painel/correcoes");

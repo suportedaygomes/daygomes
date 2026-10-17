@@ -19,27 +19,15 @@ export default async function AdminKiwifyPage() {
     .select("id, title")
     .order("created_at", { ascending: false });
 
-  const editalIds = (editais ?? []).map((item) => item.id);
-  const { data: cargos } = editalIds.length
-    ? await supabase
-        .from("edital_cargos")
-        .select("id, edital_id, name, sort_order")
-        .in("edital_id", editalIds)
-        .order("sort_order")
-    : { data: [] };
-
   const editalOptions = (editais ?? []).map((edital) => ({
     id: edital.id,
     title: edital.title,
-    cargos: (cargos ?? [])
-      .filter((cargo) => cargo.edital_id === edital.id)
-      .map((cargo) => ({ id: cargo.id, name: cargo.name })),
   }));
 
   const { data: mappings } = await supabase
     .from("kiwify_product_mappings")
     .select(
-      "kiwify_product_id, kiwify_product_name, is_active, editais(title), edital_cargos(name)",
+      "kiwify_product_id, kiwify_product_name, is_active, correction_quota, editais(title)",
     )
     .order("created_at", { ascending: false });
 
@@ -93,13 +81,12 @@ export default async function AdminKiwifyPage() {
           <ul className="mt-4 flex flex-col gap-2 text-sm">
             {(mappings ?? []).map((row) => {
               const edital = Array.isArray(row.editais) ? row.editais[0] : row.editais;
-              const cargo = Array.isArray(row.edital_cargos)
-                ? row.edital_cargos[0]
-                : row.edital_cargos;
               return (
                 <li key={row.kiwify_product_id} className="rounded-xl border border-white/8 p-3">
                   <p className="font-medium">{row.kiwify_product_name ?? row.kiwify_product_id}</p>
-                  <p className="text-muted">{edital?.title ?? "—"} · {cargo?.name ?? "—"}</p>
+                  <p className="text-muted">
+                    {edital?.title ?? "—"} · {row.correction_quota} correção(ões)
+                  </p>
                 </li>
               );
             })}

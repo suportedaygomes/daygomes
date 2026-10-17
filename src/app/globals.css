@@ -501,3 +501,47 @@ html:not([data-theme="light"]) .alert-warning a {
     max-width: 100%;
   }
 }
+
+.phase-description-prose p {
+  margin: 0 0 0.75rem;
+}
+
+.phase-description-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.phase-description-prose ul,
+.phase-description-prose ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.phase-description-prose ul {
+  list-style-type: disc;
+}
+
+.phase-description-prose ol {
+  list-style-type: decimal;
+}
+
+.phase-description-prose ol[type="a"] {
+  list-style-type: lower-alpha;
+}
+
+.phase-description-prose li {
+  margin: 0.25rem 0;
+}
+
+.phase-description-prose strong,
+.phase-description-prose b {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.phase-description-editor {
+  width: 100%;
+  height: auto;
+  min-height: 8rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

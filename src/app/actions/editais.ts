@@ -6,9 +6,16 @@ import {
   validateEvaluationRubric,
   type EditalEvaluationRubric,
 } from "@/lib/editais/evaluation-rubric";
+import {
+  phasesForCreateCargo,
+  validateCreateCargo,
+  validateEditCargo,
+} from "@/lib/editais/cargo-phases";
+import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
-import { unlockFirstPhaseForEnrollment } from "@/lib/editais/phase-access-unlock";
-import type { CargoEditInput, CreateEditalInput, UpdateEditalInput } from "@/lib/editais/types";
+import type { ActivityKind } from "@/lib/editais/activity-kind";
+import { sanitizePhaseDescriptionHtml } from "@/lib/rich-text/phase-description";
+import type { CargoEditInput, CreateEditalInput, PhaseInput, UpdateEditalInput } from "@/lib/editais/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,33 +45,49 @@ function requireAdmin(profile: Awaited<ReturnType<typeof getCurrentProfile>>["pr
   return profile && profile.role === "admin" && !profile.banned;
 }
 
-function validateCargoPhases(cargos: CargoEditInput[]) {
+function validateCreateCargos(cargos: CreateEditalInput["cargos"]) {
   if (!cargos.length) {
     return { ok: false as const, message: "Adicione pelo menos um cargo." };
   }
-
   for (const cargo of cargos) {
-    const cargoName = cargo.name.trim().toUpperCase();
-    if (!cargoName) {
-      return { ok: false as const, message: "Nome do cargo inválido." };
-    }
+    const check = validateCreateCargo(cargo);
+    if (!check.ok) return check;
+  }
+  return { ok: true as const };
+}
 
-    const vacancyCount = Number(cargo.vacancyCount);
-    if (!Number.isFinite(vacancyCount) || vacancyCount < 1) {
-      return { ok: false as const, message: `Quantidade inválida para ${cargoName}.` };
-    }
+function validateEditCargos(cargos: CargoEditInput[]) {
+  if (!cargos.length) {
+    return { ok: false as const, message: "Adicione pelo menos um cargo." };
+  }
+  for (const cargo of cargos) {
+    const check = validateEditCargo(cargo);
+    if (!check.ok) return check;
+  }
+  return { ok: true as const };
+}
 
-    if (!cargo.phases.length) {
-      return { ok: false as const, message: `Adicione fases para o cargo ${cargoName}.` };
-    }
+async function insertPhasesForCargo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cargoId: string,
+  activityKind: ActivityKind,
+  phases: PhaseInput[],
+) {
+  for (const [phaseIndex, phase] of phases.entries()) {
+    const { error: phaseError } = await supabase.from("edital_phases").insert({
+      cargo_id: cargoId,
+      activity_kind: activityKind,
+      phase_number: phaseIndex + 1,
+      title: phase.title.trim(),
+      description: sanitizePhaseDescriptionHtml(phase.description.trim()),
+      deadline_at: null,
+      updated_at: new Date().toISOString(),
+    });
 
-    for (const phase of cargo.phases) {
-      if (!phase.title.trim()) {
-        return { ok: false as const, message: "Título da fase é obrigatório." };
-      }
+    if (phaseError) {
+      return { ok: false as const, message: "Não foi possível salvar as fases." };
     }
   }
-
   return { ok: true as const };
 }
 
@@ -79,7 +102,7 @@ export async function createEdital(input: CreateEditalInput) {
     return { ok: false, message: "Informe o título do edital." };
   }
 
-  const cargoCheck = validateCargoPhases(input.cargos);
+  const cargoCheck = validateCreateCargos(input.cargos);
   if (!cargoCheck.ok) {
     return { ok: false, message: cargoCheck.message };
   }
@@ -110,14 +133,14 @@ export async function createEdital(input: CreateEditalInput) {
 
   for (const [cargoIndex, cargo] of input.cargos.entries()) {
     const cargoName = cargo.name.trim().toUpperCase();
-    const vacancyCount = Number(cargo.vacancyCount);
 
     const { data: cargoRow, error: cargoError } = await supabase
       .from("edital_cargos")
       .insert({
         edital_id: edital.id,
         name: cargoName,
-        vacancy_count: vacancyCount,
+        offers_dissertativa: cargo.offersDissertativa,
+        offers_estudo_caso: cargo.offersEstudoCaso,
         sort_order: cargoIndex,
       })
       .select("id")
@@ -127,20 +150,15 @@ export async function createEdital(input: CreateEditalInput) {
       return { ok: false, message: "Não foi possível salvar os cargos." };
     }
 
-    for (const [phaseIndex, phase] of cargo.phases.entries()) {
-      const phaseTitle = phase.title.trim();
-
-      const { error: phaseError } = await supabase.from("edital_phases").insert({
-        cargo_id: cargoRow.id,
-        phase_number: phaseIndex + 1,
-        title: phaseTitle,
-        description: phase.description.trim(),
-        deadline_at: null,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (phaseError) {
-        return { ok: false, message: "Não foi possível salvar as fases." };
+    for (const block of phasesForCreateCargo(cargo)) {
+      const phaseResult = await insertPhasesForCargo(
+        supabase,
+        cargoRow.id,
+        block.activityKind,
+        block.phases,
+      );
+      if (!phaseResult.ok) {
+        return { ok: false, message: phaseResult.message };
       }
     }
   }
@@ -152,7 +170,7 @@ export async function createEdital(input: CreateEditalInput) {
 export async function enrollMemberInEdital(input: {
   memberId: string;
   editalId: string;
-  cargoId: string;
+  correctionQuota: number;
 }) {
   const { profile } = await getCurrentProfile();
   if (!requireAdmin(profile)) {
@@ -171,41 +189,35 @@ export async function enrollMemberInEdital(input: {
     return { ok: false, message: "Selecione um membro válido." };
   }
 
-  const { data: cargo } = await admin
-    .from("edital_cargos")
-    .select("id, edital_id")
-    .eq("id", input.cargoId)
-    .eq("edital_id", input.editalId)
+  const { data: edital } = await admin
+    .from("editais")
+    .select("id")
+    .eq("id", input.editalId)
     .maybeSingle();
 
-  if (!cargo) {
-    return { ok: false, message: "Cargo não pertence a este edital." };
+  if (!edital) {
+    return { ok: false, message: "Edital não encontrado." };
   }
 
-  const { data: enrollment, error } = await admin
-    .from("member_edital_enrollments")
-    .insert({
+  const correctionQuota = normalizeCorrectionQuota(input.correctionQuota);
+
+  const { error } = await admin.from("member_edital_enrollments").upsert(
+    {
       member_id: input.memberId,
       edital_id: input.editalId,
-      cargo_id: input.cargoId,
-    })
-    .select("id")
-    .single();
+      cargo_id: null,
+      correction_quota: correctionQuota,
+    },
+    { onConflict: "member_id,edital_id" },
+  );
 
   if (error) {
-    if (error.code === "23505") {
-      return { ok: false, message: "Este membro já está vinculado a este cargo." };
-    }
     return { ok: false, message: "Não foi possível vincular o membro." };
-  }
-
-  if (enrollment) {
-    await unlockFirstPhaseForEnrollment(admin, enrollment.id, input.cargoId, profile?.id);
   }
 
   revalidatePath(`/painel/admin/editais/${input.editalId}`);
   revalidatePath("/painel/editais");
-  return { ok: true, message: "Membro vinculado ao edital." };
+  return { ok: true, message: "Membro vinculado à mentoria." };
 }
 
 export async function updateEditalEvaluationRubric(input: {
@@ -252,7 +264,7 @@ export async function updateEdital(input: UpdateEditalInput) {
     return { ok: false, message: "Informe o título do edital." };
   }
 
-  const cargoCheck = validateCargoPhases(input.cargos);
+  const cargoCheck = validateEditCargos(input.cargos);
   if (!cargoCheck.ok) {
     return { ok: false, message: cargoCheck.message };
   }
@@ -297,16 +309,23 @@ export async function updateEdital(input: UpdateEditalInput) {
   for (const row of existingCargos ?? []) {
     if (keptCargoIds.has(row.id)) continue;
 
-    const { count: enrollmentCount } = await admin
-      .from("member_edital_enrollments")
-      .select("*", { count: "exact", head: true })
+    const { data: cargoPhases } = await supabase
+      .from("edital_phases")
+      .select("id")
       .eq("cargo_id", row.id);
 
-    if (enrollmentCount && enrollmentCount > 0) {
-      return {
-        ok: false,
-        message: "Não é possível remover um cargo com membros inscritos.",
-      };
+    for (const phase of cargoPhases ?? []) {
+      const { count: submissionCount } = await admin
+        .from("phase_submissions")
+        .select("*", { count: "exact", head: true })
+        .eq("phase_id", phase.id);
+
+      if (submissionCount && submissionCount > 0) {
+        return {
+          ok: false,
+          message: "Não é possível remover um cargo que já recebeu envios.",
+        };
+      }
     }
 
     const { error: deleteCargoError } = await supabase
@@ -321,7 +340,6 @@ export async function updateEdital(input: UpdateEditalInput) {
 
   for (const [cargoIndex, cargo] of input.cargos.entries()) {
     const cargoName = cargo.name.trim().toUpperCase();
-    const vacancyCount = Number(cargo.vacancyCount);
     let cargoId = cargo.id;
 
     if (cargoId) {
@@ -329,7 +347,8 @@ export async function updateEdital(input: UpdateEditalInput) {
         .from("edital_cargos")
         .update({
           name: cargoName,
-          vacancy_count: vacancyCount,
+          offers_dissertativa: cargo.offersDissertativa,
+          offers_estudo_caso: cargo.offersEstudoCaso,
           sort_order: cargoIndex,
         })
         .eq("id", cargoId)
@@ -344,7 +363,8 @@ export async function updateEdital(input: UpdateEditalInput) {
         .insert({
           edital_id: input.editalId,
           name: cargoName,
-          vacancy_count: vacancyCount,
+          offers_dissertativa: cargo.offersDissertativa,
+          offers_estudo_caso: cargo.offersEstudoCaso,
           sort_order: cargoIndex,
         })
         .select("id")
@@ -390,34 +410,44 @@ export async function updateEdital(input: UpdateEditalInput) {
       }
     }
 
-    for (const [phaseIndex, phase] of cargo.phases.entries()) {
-      const phaseTitle = phase.title.trim();
-      const phasePayload = {
-        cargo_id: cargoId,
-        phase_number: phaseIndex + 1,
-        title: phaseTitle,
-        description: phase.description.trim(),
-        updated_at: new Date().toISOString(),
-      };
+    const phasesByKind = new Map<ActivityKind, CargoEditInput["phases"]>();
+    for (const phase of cargo.phases) {
+      const list = phasesByKind.get(phase.activityKind) ?? [];
+      list.push(phase);
+      phasesByKind.set(phase.activityKind, list);
+    }
 
-      if (phase.id) {
-        const { error: phaseUpdateError } = await supabase
-          .from("edital_phases")
-          .update(phasePayload)
-          .eq("id", phase.id)
-          .eq("cargo_id", cargoId);
+    for (const [activityKind, kindPhases] of phasesByKind) {
+      for (const [phaseIndex, phase] of kindPhases.entries()) {
+        const phaseTitle = phase.title.trim();
+        const phasePayload = {
+          cargo_id: cargoId,
+          activity_kind: activityKind,
+          phase_number: phaseIndex + 1,
+          title: phaseTitle,
+          description: sanitizePhaseDescriptionHtml(phase.description.trim()),
+          updated_at: new Date().toISOString(),
+        };
 
-        if (phaseUpdateError) {
-          return { ok: false, message: "Não foi possível atualizar as fases." };
-        }
-      } else {
-        const { error: phaseInsertError } = await supabase.from("edital_phases").insert({
-          ...phasePayload,
-          deadline_at: null,
-        });
+        if (phase.id) {
+          const { error: phaseUpdateError } = await supabase
+            .from("edital_phases")
+            .update(phasePayload)
+            .eq("id", phase.id)
+            .eq("cargo_id", cargoId);
 
-        if (phaseInsertError) {
-          return { ok: false, message: "Não foi possível adicionar a fase." };
+          if (phaseUpdateError) {
+            return { ok: false, message: "Não foi possível atualizar as fases." };
+          }
+        } else {
+          const { error: phaseInsertError } = await supabase.from("edital_phases").insert({
+            ...phasePayload,
+            deadline_at: null,
+          });
+
+          if (phaseInsertError) {
+            return { ok: false, message: "Não foi possível adicionar a fase." };
+          }
         }
       }
     }

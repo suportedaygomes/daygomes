@@ -28,7 +28,7 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
 
   const { data: cargos } = await supabase
     .from("edital_cargos")
-    .select("id, name, vacancy_count, sort_order")
+    .select("id, name, offers_dissertativa, offers_estudo_caso, sort_order")
     .eq("edital_id", id)
     .order("sort_order");
 
@@ -36,7 +36,7 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
   const { data: phases } = cargoIds.length
     ? await supabase
         .from("edital_phases")
-        .select("id, cargo_id, phase_number, title, description, deadline_at")
+        .select("id, cargo_id, activity_kind, phase_number, title, description, deadline_at")
         .in("cargo_id", cargoIds)
         .order("phase_number")
     : { data: [] };
@@ -49,7 +49,7 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
 
   const { data: enrollments } = await supabase
     .from("member_edital_enrollments")
-    .select("id, member_id, cargo_id, profiles(full_name, email), edital_cargos(name)")
+    .select("id, member_id, correction_quota, profiles(full_name, email)")
     .eq("edital_id", id);
 
   const attachments = await listEditalAttachments(id);
@@ -74,11 +74,14 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
         initialCargos={(cargos ?? []).map((cargo) => ({
           id: cargo.id,
           name: cargo.name,
-          vacancyCount: cargo.vacancy_count,
+          offersDissertativa: cargo.offers_dissertativa,
+          offersEstudoCaso: cargo.offers_estudo_caso,
           phases: (phases ?? [])
             .filter((phase) => phase.cargo_id === cargo.id)
             .map((phase) => ({
               id: phase.id,
+              activityKind:
+                phase.activity_kind === "estudo_caso" ? "estudo_caso" : "dissertativa",
               title: phase.title,
               description: phase.description,
             })),
@@ -93,11 +96,7 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
       <section className="panel-card h-fit max-w-xl">
         <h2 className="panel-title">Vincular membro</h2>
         <div className="mt-4">
-          <EnrollMemberForm
-            editalId={id}
-            members={members ?? []}
-            cargos={(cargos ?? []).map((cargo) => ({ id: cargo.id, name: cargo.name }))}
-          />
+          <EnrollMemberForm editalId={id} members={members ?? []} />
         </div>
       </section>
 
@@ -106,12 +105,10 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
         <div className="mt-4 flex flex-col gap-2">
           {(enrollments ?? []).map((row) => {
             const member = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-            const cargo = Array.isArray(row.edital_cargos)
-              ? row.edital_cargos[0]
-              : row.edital_cargos;
             return (
               <p key={row.id} className="text-sm">
-                {member?.full_name ?? "—"} · {cargo?.name ?? "—"} ({member?.email ?? "—"})
+                {member?.full_name ?? "—"} · {row.correction_quota} correção(ões) (
+                {member?.email ?? "—"})
               </p>
             );
           })}

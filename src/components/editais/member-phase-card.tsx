@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { CorrectorPublicInline } from "@/components/editais/corrector-public-inline";
 import { MembroCorrecaoCardActions } from "@/components/editais/membro-correcao-actions";
+import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
+import { MemberPhaseStatusBadge } from "@/components/editais/member-phase-status-badge";
 
 type SubmissionStatus = "enviado" | "em_correcao" | "corrigido" | null;
 
@@ -16,6 +18,7 @@ type MemberPhaseCardProps = {
   submissionStatus: SubmissionStatus;
   submissionId: string | null;
   allowResubmit: boolean;
+  quotaBlocksNewUpload?: boolean;
   correction?: {
     grade: number | null;
     feedback: string;
@@ -26,6 +29,8 @@ type MemberPhaseCardProps = {
     avatarUrl: string | null;
     bio: string | null;
   } | null;
+  trackLabel?: string;
+  defaultCollapsed?: boolean;
 };
 
 export function MemberPhaseCard({
@@ -38,8 +43,11 @@ export function MemberPhaseCard({
   submissionStatus,
   submissionId,
   allowResubmit,
+  quotaBlocksNewUpload = false,
   correction,
   corrector,
+  trackLabel,
+  defaultCollapsed = false,
 }: MemberPhaseCardProps) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -52,6 +60,7 @@ export function MemberPhaseCard({
     submissionStatus === "enviado" || submissionStatus === "em_correcao";
   const canUpload =
     !expired &&
+    !quotaBlocksNewUpload &&
     (!submissionStatus || (submissionStatus === "corrigido" && allowResubmit));
   const showCorrection =
     correction &&
@@ -87,20 +96,43 @@ export function MemberPhaseCard({
     window.location.reload();
   }
 
-  return (
-    <article className="panel-card flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-purple">Fase {phaseNumber}</p>
+  const phaseForBadge = {
+    deadlineAt,
+    submissionStatus,
+    allowResubmit,
+    quotaBlocksNewUpload,
+  };
+
+  const inner = (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-purple">Fase {phaseNumber}</p>
+            <MemberPhaseStatusBadge phase={phaseForBadge} />
+            {showCorrection && correction?.grade != null ? (
+              <span className="text-sm font-semibold tabular-nums text-emerald-200">
+                Nota {correction.grade.toLocaleString("pt-BR")}
+              </span>
+            ) : null}
+          </div>
+          {trackLabel ? <p className="text-xs text-muted">{trackLabel}</p> : null}
+        </div>
         <p className="text-xs text-muted">
-          Prazo para envio: {deadline.toLocaleString("pt-BR")}
+          Prazo: {deadline.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
         </p>
       </div>
       <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="text-sm leading-6 text-muted">{description}</p>
+      <PhaseDescriptionContent html={description} />
 
       {awaitingCorrection ? (
         <p className="text-sm text-beige">
           Atividade enviada. Esta fase fica bloqueada até o corretor publicar a correção.
+        </p>
+      ) : quotaBlocksNewUpload && !submissionStatus ? (
+        <p className="text-sm text-amber-200">
+          Você já usou todas as correções da mentoria. Escolha outra fase só se o corretor liberar
+          reenvio em uma fase já enviada.
         </p>
       ) : expired && !submissionStatus ? (
         <p className="text-sm text-red-300">Prazo encerrado.</p>
@@ -133,7 +165,7 @@ export function MemberPhaseCard({
           </button>
         </div>
       ) : submissionStatus === "corrigido" ? (
-        <p className="text-sm text-muted">Fase corrigida. Aguarde a liberação da próxima fase.</p>
+        <p className="text-sm text-muted">Fase corrigida. Reenvio somente se o corretor liberar.</p>
       ) : null}
 
       {file ? (
@@ -169,6 +201,33 @@ export function MemberPhaseCard({
 
       {error ? <p className="alert-error">{error}</p> : null}
       {message ? <p className="alert-success">{message}</p> : null}
-    </article>
+    </>
   );
+
+  if (defaultCollapsed && showCorrection) {
+    return (
+      <details className="panel-card group">
+        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">
+                Fase {phaseNumber} · {title}
+              </span>
+              <MemberPhaseStatusBadge phase={phaseForBadge} />
+              {correction?.grade != null ? (
+                <span className="text-sm font-semibold tabular-nums text-emerald-200">
+                  {correction.grade.toLocaleString("pt-BR")}
+                </span>
+              ) : null}
+            </div>
+            <span className="text-xs text-muted group-open:hidden">Ver correção</span>
+          </div>
+          {trackLabel ? <p className="mt-1 text-xs text-muted">{trackLabel}</p> : null}
+        </summary>
+        <div className="mt-4 flex flex-col gap-3 border-t border-white/10 pt-4">{inner}</div>
+      </details>
+    );
+  }
+
+  return <article className="panel-card flex flex-col gap-3">{inner}</article>;
 }

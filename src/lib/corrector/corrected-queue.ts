@@ -1,6 +1,8 @@
 import type { ProfileRow } from "@/lib/auth/profile";
 import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
 import { unwrapSingle } from "@/lib/corrector/submission-row-utils";
+import { activityKindShortLabel, cargoDisplayName } from "@/lib/editais/activity-kind";
+import type { ActivityKind } from "@/lib/editais/activity-kind";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CorrectedSubmissionListRow = {
@@ -31,7 +33,7 @@ export async function listCorrectedSubmissionsForStaff(
   let correctionsQuery = admin
     .from("phase_corrections")
     .select(
-      `submission_id, grade, corrector_id, updated_at, allow_resubmit, profiles!phase_corrections_corrector_id_fkey(full_name), phase_submissions!inner(id, member_id, status, submitted_at, ${submissionMemberProfileEmbed}, edital_phases(title, phase_number), member_edital_enrollments!phase_submissions_enrollment_id_fkey(edital_id, cargo_id, editais(title), edital_cargos(name)))`,
+      `submission_id, grade, corrector_id, updated_at, allow_resubmit, profiles!phase_corrections_corrector_id_fkey(full_name), phase_submissions!inner(id, member_id, status, submitted_at, ${submissionMemberProfileEmbed}, edital_phases(title, phase_number, activity_kind, edital_cargos(id, name, edital_id, editais(title))), member_edital_enrollments!phase_submissions_enrollment_id_fkey(edital_id))`,
     )
     .eq("phase_submissions.status", "corrigido")
     .order("updated_at", { ascending: false })
@@ -55,8 +57,12 @@ export async function listCorrectedSubmissionsForStaff(
     const enrollment = submission
       ? unwrapSingle(submission.member_edital_enrollments)
       : null;
-    const edital = enrollment ? unwrapSingle(enrollment.editais) : null;
-    const cargo = enrollment ? unwrapSingle(enrollment.edital_cargos) : null;
+    const cargo = phase ? unwrapSingle(phase.edital_cargos) : null;
+    const edital = cargo ? unwrapSingle(cargo.editais) : null;
+    const activityKind = (phase?.activity_kind as ActivityKind | undefined) ?? "dissertativa";
+    const cargoLabel = cargo?.name
+      ? cargoDisplayName(cargo.name, activityKind)
+      : activityKindShortLabel(activityKind);
 
     const gradeRaw = row.grade;
     const grade =
@@ -69,10 +75,10 @@ export async function listCorrectedSubmissionsForStaff(
       member_id: submission?.member_id ?? "",
       submitted_at: submission?.submitted_at ?? "",
       memberName: member?.full_name ?? "Aluno",
-      editalId: enrollment?.edital_id ?? "",
+      editalId: enrollment?.edital_id ?? cargo?.edital_id ?? "",
       editalTitle: edital?.title ?? "Edital",
-      cargoId: enrollment?.cargo_id ?? "",
-      cargoName: cargo?.name ?? "Cargo",
+      cargoId: cargo?.id ?? "",
+      cargoName: cargoLabel,
       phaseTitle: phase?.title ?? "Fase",
       phaseNumber: phase?.phase_number ?? null,
       grade: Number.isFinite(grade) ? grade : null,
