@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const result = await provisionKiwifyOrder(payload);
 
   if (!result.ok) {
-    console.error("[kiwify-webhook:approve]", result.error, result.orderId);
+    console.error("[kiwify-webhook:approve]", result.error, "orderId=", result.orderId);
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
 

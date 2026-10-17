@@ -1,6 +1,6 @@
-import { generateTemporaryPassword } from "@/lib/auth/password";
 import { normalizeCpf, isValidCpf } from "@/lib/cpf";
 import { sendAccessEmail } from "@/lib/email/send-access-email";
+import { resolveOrCreateMemberProfile } from "@/lib/kiwify/resolve-member-profile";
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
@@ -66,51 +66,30 @@ export async function provisionKiwifyOrder(
   const cpf = normalizeCpf(cpfRaw);
   const cpfValid = cpf ? isValidCpf(cpf) : false;
 
-  let profileId: string | null = null;
-  let createdUser = false;
-  let temporaryPassword: string | undefined;
+  const memberResult = await resolveOrCreateMemberProfile({
+    admin,
+    email,
+    fullName,
+    cpfValid,
+    cpf,
+  });
 
-  const { data: existingProfile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
+  if (!memberResult.ok) {
+    console.error(
+      "[kiwify:provision] resolve member failed",
+      memberResult.logDetail,
+      { orderId, email },
+    );
+    return { ok: false, orderId, error: memberResult.error };
+  }
 
-  if (existingProfile) {
-    profileId = existingProfile.id;
-    if (cpfValid) {
-      await admin.from("profiles").update({ cpf, full_name: fullName }).eq("id", profileId);
-    }
-  } else {
-    temporaryPassword = generateTemporaryPassword();
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
+  const { profileId, createdUser, temporaryPassword } = memberResult;
+
+  if (memberResult.cpfOmitted) {
+    console.warn("[kiwify:provision] CPF omitido (já usado por outro perfil)", {
+      orderId,
       email,
-      password: temporaryPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-        role: "membro",
-        cpf: cpfValid ? cpf : undefined,
-      },
     });
-
-    if (createError || !created.user) {
-      return { ok: false, orderId, error: "Não foi possível criar o usuário." };
-    }
-
-    profileId = created.user.id;
-    createdUser = true;
-
-    await admin
-      .from("profiles")
-      .update({
-        full_name: fullName,
-        role: "membro",
-        email,
-        cpf: cpfValid ? cpf : null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", profileId);
   }
 
   let enrollmentId: string | null = null;
@@ -146,6 +125,11 @@ export async function provisionKiwifyOrder(
       .single();
 
     if (enrollError || !enrollment) {
+      console.error(
+        "[kiwify:provision] enrollment insert failed",
+        enrollError?.message ?? "sem enrollment",
+        { orderId, profileId, editalId: mapping.edital_id },
+      );
       return { ok: false, orderId, error: "Não foi possível vincular o edital." };
     }
 
