@@ -20,7 +20,7 @@ export async function saveCorrection(input: {
   feedback?: string;
   rubricScores?: RubricScores;
   errorsNotes: string;
-  allowResubmit: boolean;
+  resubmitMode: "none" | "free" | "charged";
 }) {
   const { user, profile } = await getCurrentProfile();
 
@@ -61,7 +61,8 @@ export async function saveCorrection(input: {
     }
   }
 
-  const allowResubmit = input.allowResubmit;
+  const allowResubmit = input.resubmitMode !== "none";
+  const resubmitChargesQuota = input.resubmitMode === "charged";
 
   const admin = createAdminClient();
 
@@ -119,6 +120,7 @@ export async function saveCorrection(input: {
     rubric_scores: rubricScores,
     next_phase_unlocked: false,
     allow_resubmit: allowResubmit,
+    resubmit_charges_quota: resubmitChargesQuota,
     updated_at: new Date().toISOString(),
   };
 

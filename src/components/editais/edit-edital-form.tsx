@@ -93,19 +93,25 @@ export function EditEditalForm({
     setError("");
     setMessage("");
     setPending(true);
-
-    const result = await updateEdital({
-      editalId,
-      title,
-      submissionPeriodDays,
-      cargos,
-    });
-    if (!result.ok) {
-      setError(result.message);
-    } else {
-      setMessage(result.message);
+    try {
+      const result = await updateEdital({
+        editalId,
+        title,
+        submissionPeriodDays,
+        cargos,
+      });
+      if (!result.ok) {
+        setError(result.message);
+      } else {
+        setMessage(result.message);
+      }
+    } catch {
+      setError(
+        "Não foi possível salvar. Se o edital é grande, aguarde um pouco e tente de novo — ou recarregue a página.",
+      );
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }
 
   return (

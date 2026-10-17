@@ -254,6 +254,7 @@ export async function updateEditalEvaluationRubric(input: {
 }
 
 export async function updateEdital(input: UpdateEditalInput) {
+  try {
   const { profile } = await getCurrentProfile();
   if (!requireAdmin(profile)) {
     return { ok: false, message: "Acesso negado." };
@@ -418,37 +419,41 @@ export async function updateEdital(input: UpdateEditalInput) {
     }
 
     for (const [activityKind, kindPhases] of phasesByKind) {
-      for (const [phaseIndex, phase] of kindPhases.entries()) {
-        const phaseTitle = phase.title.trim();
-        const phasePayload = {
-          cargo_id: cargoId,
-          activity_kind: activityKind,
-          phase_number: phaseIndex + 1,
-          title: phaseTitle,
-          description: sanitizePhaseDescriptionHtml(phase.description.trim()),
-          updated_at: new Date().toISOString(),
-        };
+      const phaseResults = await Promise.all(
+        kindPhases.map(async (phase, phaseIndex) => {
+          const phaseTitle = phase.title.trim();
+          const phasePayload = {
+            cargo_id: cargoId,
+            activity_kind: activityKind,
+            phase_number: phaseIndex + 1,
+            title: phaseTitle,
+            description: sanitizePhaseDescriptionHtml(phase.description.trim()),
+            updated_at: new Date().toISOString(),
+          };
 
-        if (phase.id) {
-          const { error: phaseUpdateError } = await supabase
-            .from("edital_phases")
-            .update(phasePayload)
-            .eq("id", phase.id)
-            .eq("cargo_id", cargoId);
+          if (phase.id) {
+            const { error: phaseUpdateError } = await admin
+              .from("edital_phases")
+              .update(phasePayload)
+              .eq("id", phase.id)
+              .eq("cargo_id", cargoId);
 
-          if (phaseUpdateError) {
-            return { ok: false, message: "Não foi possível atualizar as fases." };
+            return phaseUpdateError;
           }
-        } else {
-          const { error: phaseInsertError } = await supabase.from("edital_phases").insert({
+
+          const { error: phaseInsertError } = await admin.from("edital_phases").insert({
             ...phasePayload,
             deadline_at: null,
           });
 
-          if (phaseInsertError) {
-            return { ok: false, message: "Não foi possível adicionar a fase." };
-          }
-        }
+          return phaseInsertError;
+        }),
+      );
+
+      const phaseError = phaseResults.find(Boolean);
+      if (phaseError) {
+        console.error("[updateEdital] phase save failed", phaseError.message);
+        return { ok: false, message: "Não foi possível atualizar as fases." };
       }
     }
   }
@@ -457,4 +462,11 @@ export async function updateEdital(input: UpdateEditalInput) {
   revalidatePath(`/painel/admin/editais/${input.editalId}`);
   revalidatePath("/painel/editais");
   return { ok: true, message: "Edital atualizado com sucesso." };
+  } catch (error) {
+    console.error("[updateEdital] unexpected error", error);
+    return {
+      ok: false,
+      message: "Erro inesperado ao salvar o edital. Tente novamente em instantes.",
+    };
+  }
 }

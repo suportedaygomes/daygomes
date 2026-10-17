@@ -3,6 +3,11 @@ import type { NextConfig } from "next";
 import { baselineSecurityHeaders } from "./src/lib/security/headers";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   images: {
     remotePatterns: [

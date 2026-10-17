@@ -69,7 +69,7 @@ export default async function CorrecaoDetailPage({
   const { data: correction } = await supabase
     .from("phase_corrections")
     .select(
-      "grade, feedback, errors_notes, rubric_scores, next_phase_unlocked, allow_resubmit",
+      "grade, feedback, errors_notes, rubric_scores, next_phase_unlocked, allow_resubmit, resubmit_charges_quota",
     )
     .eq("submission_id", id)
     .maybeSingle();
@@ -122,7 +122,11 @@ export default async function CorrecaoDetailPage({
                   feedback: correction.feedback,
                   errorsNotes: correction.errors_notes,
                   rubricScores: initialRubricScores,
-                  allowResubmit: correction.allow_resubmit,
+                  resubmitMode: correction.allow_resubmit
+                    ? correction.resubmit_charges_quota
+                      ? "charged"
+                      : "free"
+                    : "none",
                 }
               : undefined
           }

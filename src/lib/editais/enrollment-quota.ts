@@ -19,6 +19,29 @@ export async function countEnrollmentSubmissionsUsed(enrollmentId: string): Prom
   return count ?? 0;
 }
 
+export async function countEnrollmentChargedResubmitsUsed(
+  enrollmentId: string,
+): Promise<number> {
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("enrollment_correction_quota_charges")
+    .select("*", { count: "exact", head: true })
+    .eq("enrollment_id", enrollmentId);
+
+  return count ?? 0;
+}
+
+/** Envios em fases distintas + reenvios pagos liberados pelo corretor. */
+export async function countEnrollmentCorrectionQuotaUsed(
+  enrollmentId: string,
+): Promise<number> {
+  const [submissions, charged] = await Promise.all([
+    countEnrollmentSubmissionsUsed(enrollmentId),
+    countEnrollmentChargedResubmitsUsed(enrollmentId),
+  ]);
+  return submissions + charged;
+}
+
 export function correctionsRemaining(quota: number, used: number) {
   return Math.max(0, normalizeCorrectionQuota(quota) - used);
 }

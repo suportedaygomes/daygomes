@@ -7,7 +7,11 @@ import type { ActivityKind } from "@/lib/editais/activity-kind";
 import { cargoDisplayName } from "@/lib/editais/activity-kind";
 import { listEditalAttachmentsByEditalIds } from "@/lib/editais/attachments";
 import { computeEditalAverageByPhases } from "@/lib/editais/edital-phase-average";
-import { correctionsRemaining, normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
+import {
+  correctionsRemaining,
+  countEnrollmentChargedResubmitsUsed,
+  normalizeCorrectionQuota,
+} from "@/lib/editais/enrollment-quota";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
 import {
   normalizeSubmissionPeriodDays,
@@ -73,7 +77,7 @@ export default async function MembroEditaisPage() {
       ? await admin
           .from("phase_corrections")
           .select(
-            "submission_id, grade, feedback, errors_notes, allow_resubmit, corrector_id",
+            "submission_id, grade, feedback, errors_notes, allow_resubmit, resubmit_charges_quota, corrector_id",
           )
           .in("submission_id", submissionIds)
       : { data: [] };
@@ -88,7 +92,8 @@ export default async function MembroEditaisPage() {
 
     const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
     const correctionQuota = normalizeCorrectionQuota(enrollment.correction_quota);
-    const correctionsUsed = submissions?.length ?? 0;
+    const chargedResubmits = await countEnrollmentChargedResubmitsUsed(enrollment.id);
+    const correctionsUsed = (submissions?.length ?? 0) + chargedResubmits;
     const remaining = correctionsRemaining(correctionQuota, correctionsUsed);
 
     const editalCargos = (cargos ?? []).filter((c) => c.edital_id === enrollment.edital_id);
@@ -137,6 +142,7 @@ export default async function MembroEditaisPage() {
               submissionId: submission?.id ?? null,
               submissionStatus: submission?.status ?? null,
               allowResubmit: correction?.allow_resubmit ?? false,
+              resubmitChargesQuota: correction?.resubmit_charges_quota ?? false,
               quotaBlocksNewUpload,
               correction: correction
                 ? {

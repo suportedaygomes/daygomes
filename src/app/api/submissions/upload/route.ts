@@ -9,7 +9,7 @@ import {
 } from "@/lib/r2/storage";
 import {
   correctionsRemaining,
-  countEnrollmentSubmissionsUsed,
+  countEnrollmentCorrectionQuotaUsed,
 } from "@/lib/editais/enrollment-quota";
 import {
   isMemberPhaseDeadlineExpired,
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     if (existing.status === "corrigido") {
       const { data: correction } = await supabase
         .from("phase_corrections")
-        .select("allow_resubmit")
+        .select("allow_resubmit, resubmit_charges_quota")
         .eq("submission_id", existing.id)
         .maybeSingle();
 
@@ -121,11 +121,25 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
+
+      if (correction.resubmit_charges_quota) {
+        const used = await countEnrollmentCorrectionQuotaUsed(enrollmentId);
+        const remaining = correctionsRemaining(enrollment.correction_quota, used);
+        if (remaining <= 0) {
+          return NextResponse.json(
+            {
+              error:
+                "Você não tem correções disponíveis no plano para este reenvio. O corretor liberou reenvio com consumo de cota.",
+            },
+            { status: 400 },
+          );
+        }
+      }
     } else {
       return NextResponse.json({ error: "Você já enviou esta fase." }, { status: 400 });
     }
   } else {
-    const used = await countEnrollmentSubmissionsUsed(enrollmentId);
+    const used = await countEnrollmentCorrectionQuotaUsed(enrollmentId);
     const remaining = correctionsRemaining(enrollment.correction_quota, used);
     if (remaining <= 0) {
       return NextResponse.json(
@@ -206,10 +220,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Não foi possível registrar o reenvio." }, { status: 500 });
     }
 
+    const { data: correctionBeforeResubmit } = await admin
+      .from("phase_corrections")
+      .select("resubmit_charges_quota")
+      .eq("submission_id", existing.id)
+      .maybeSingle();
+
     await admin
       .from("phase_corrections")
-      .update({ allow_resubmit: false, updated_at: new Date().toISOString() })
+      .update({
+        allow_resubmit: false,
+        resubmit_charges_quota: false,
+        updated_at: new Date().toISOString(),
+      })
       .eq("submission_id", existing.id);
+
+    if (correctionBeforeResubmit?.resubmit_charges_quota) {
+      const { error: chargeError } = await admin
+        .from("enrollment_correction_quota_charges")
+        .insert({
+          enrollment_id: enrollmentId,
+          phase_id: phaseId,
+          submission_id: existing.id,
+        });
+
+      if (chargeError) {
+        console.error("[submissions:upload] quota charge insert failed", chargeError.message);
+        return NextResponse.json(
+          { error: "Não foi possível registrar o uso da cota." },
+          { status: 500 },
+        );
+      }
+    }
 
     if (previousPath && previousPath !== storagePath) {
       await deleteR2Object(previousPath).catch(() => undefined);

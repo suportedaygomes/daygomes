@@ -6,6 +6,8 @@ import { saveCorrection } from "@/app/actions/corrections";
 import { CorrectionRubricPanel } from "@/components/editais/correction-rubric-panel";
 import type { EditalEvaluationRubric, RubricScores } from "@/lib/editais/evaluation-rubric";
 
+export type CorrectionResubmitMode = "none" | "free" | "charged";
+
 type CorrectionFormProps = {
   submissionId: string;
   memberName: string;
@@ -17,9 +19,14 @@ type CorrectionFormProps = {
     feedback: string;
     errorsNotes: string;
     rubricScores?: RubricScores | null;
-    allowResubmit: boolean;
+    resubmitMode?: CorrectionResubmitMode;
   };
 };
+
+function initialResubmitMode(initial?: CorrectionFormProps["initial"]): CorrectionResubmitMode {
+  if (!initial?.resubmitMode) return "none";
+  return initial.resubmitMode;
+}
 
 export function CorrectionForm({
   submissionId,
@@ -37,7 +44,9 @@ export function CorrectionForm({
     initial?.rubricScores ?? {},
   );
   const [errorsNotes, setErrorsNotes] = useState(initial?.errorsNotes ?? "");
-  const [allowResubmit, setAllowResubmit] = useState(Boolean(initial?.allowResubmit));
+  const [resubmitMode, setResubmitMode] = useState<CorrectionResubmitMode>(
+    initialResubmitMode(initial),
+  );
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
@@ -48,22 +57,26 @@ export function CorrectionForm({
     setMessage("");
 
     setPending(true);
+    try {
+      const result = await saveCorrection({
+        submissionId,
+        grade: hasRubric ? undefined : Number(grade),
+        feedback: hasRubric ? undefined : feedback,
+        rubricScores: hasRubric ? rubricScores : undefined,
+        errorsNotes,
+        resubmitMode,
+      });
 
-    const result = await saveCorrection({
-      submissionId,
-      grade: hasRubric ? undefined : Number(grade),
-      feedback: hasRubric ? undefined : feedback,
-      rubricScores: hasRubric ? rubricScores : undefined,
-      errorsNotes,
-      allowResubmit,
-    });
-
-    if (!result.ok) {
-      setError(result.message);
-    } else {
-      setMessage(result.message);
+      if (!result.ok) {
+        setError(result.message);
+      } else {
+        setMessage(result.message);
+      }
+    } catch {
+      setError("Não foi possível salvar. Verifique a conexão e tente novamente.");
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }
 
   return (
@@ -136,15 +149,47 @@ export function CorrectionForm({
       </label>
 
       <fieldset className="flex flex-col gap-3 rounded-xl border border-[color:var(--border-subtle)] p-4">
-        <legend className="px-1 text-sm font-medium">Após a correção</legend>
+        <legend className="px-1 text-sm font-medium">Reenvio nesta fase (após salvar)</legend>
         <label className="flex items-start gap-2 text-sm">
           <input
-            type="checkbox"
+            type="radio"
+            name="resubmitMode"
             className="mt-1"
-            checked={allowResubmit}
-            onChange={(event) => setAllowResubmit(event.target.checked)}
+            checked={resubmitMode === "none"}
+            onChange={() => setResubmitMode("none")}
           />
-          <span>Liberar reenvio desta fase (não consome nova correção da cota)</span>
+          <span>
+            <strong className="text-foreground">Não liberar reenvio</strong> — aluno só vê a
+            correção.
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name="resubmitMode"
+            className="mt-1"
+            checked={resubmitMode === "free"}
+            onChange={() => setResubmitMode("free")}
+          />
+          <span>
+            <strong className="text-foreground">Reenvio gratuito</strong> — aluno pode enviar de
+            novo nesta fase <strong className="text-foreground">sem</strong> gastar correção do
+            plano.
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name="resubmitMode"
+            className="mt-1"
+            checked={resubmitMode === "charged"}
+            onChange={() => setResubmitMode("charged")}
+          />
+          <span>
+            <strong className="text-foreground">Reenvio com consumo de cota</strong> — o próximo
+            envio nesta fase usa <strong className="text-foreground">1 correção</strong> do plano
+            do aluno (ex.: de 4 passa a 3).
+          </span>
         </label>
       </fieldset>
 

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { EditalAttachmentsPanel } from "@/components/editais/edital-attachments-panel";
 import { MemberPhaseCard } from "@/components/editais/member-phase-card";
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
+import { MemberCorrectionQuotaPanel } from "@/components/editais/member-correction-quota-panel";
 import { MemberPhaseStatusBadge } from "@/components/editais/member-phase-status-badge";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
 import type { EditalAttachmentView } from "@/lib/editais/attachments-shared";
@@ -21,6 +22,7 @@ export type MemberPhaseView = {
   submissionId: string | null;
   submissionStatus: "enviado" | "em_correcao" | "corrigido" | null;
   allowResubmit: boolean;
+  resubmitChargesQuota?: boolean;
   quotaBlocksNewUpload: boolean;
   correction: {
     grade: number | null;
@@ -190,23 +192,13 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
 
   return (
     <section className="flex flex-col gap-6">
-      <header className="panel-card flex flex-col gap-3">
+      <header className="panel-card flex flex-col gap-4">
         <h2 className="text-2xl font-semibold">{enrollment.editalTitle}</h2>
-        <p className="text-sm text-muted">
-          Você pode enviar até{" "}
-          <strong className="text-foreground">{enrollment.correctionQuota}</strong> correções nesta
-          mentoria (em qualquer cargo ou fase). Cada fase nova enviada usa{" "}
-          <strong className="text-foreground">1</strong> da sua cota; reenvio liberado pelo
-          corretor <strong className="text-foreground">não</strong> consome outra.
-        </p>
-        <p className="text-sm text-muted">
-          Utilizadas:{" "}
-          <strong className="text-foreground">
-            {enrollment.correctionsUsed} de {enrollment.correctionQuota}
-          </strong>{" "}
-          · Disponíveis:{" "}
-          <strong className="text-foreground">{enrollment.correctionsRemaining}</strong>
-        </p>
+        <MemberCorrectionQuotaPanel
+          correctionQuota={enrollment.correctionQuota}
+          correctionsUsed={enrollment.correctionsUsed}
+          correctionsRemaining={enrollment.correctionsRemaining}
+        />
         {enrollment.averageGrade != null ? (
           <p className="text-sm text-muted">
             Média nas fases corrigidas:{" "}
@@ -276,6 +268,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                   submissionStatus={phase.submissionStatus}
                   submissionId={phase.submissionId}
                   allowResubmit={phase.allowResubmit}
+                  resubmitChargesQuota={phase.resubmitChargesQuota}
                   quotaBlocksNewUpload={phase.quotaBlocksNewUpload}
                   correction={phase.correction}
                   corrector={phase.corrector}
@@ -316,7 +309,15 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
       {enrollment.tracks.length ? (
         <section className="flex flex-col gap-4">
           <div className="panel-card flex flex-col gap-4">
-            <h3 className="panel-title">Enviar ou revisar uma fase</h3>
+            <div className="flex flex-col gap-3">
+              <h3 className="panel-title">Enviar ou revisar uma fase</h3>
+              <MemberCorrectionQuotaPanel
+                correctionQuota={enrollment.correctionQuota}
+                correctionsUsed={enrollment.correctionsUsed}
+                correctionsRemaining={enrollment.correctionsRemaining}
+                compact
+              />
+            </div>
             {enrollment.tracks.length > 1 ? (
               <label className="flex flex-col gap-2 text-sm font-medium">
                 Cargo e modalidade
@@ -344,7 +345,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                 [
                   ["corrigidas", `Corrigidas (${tabCounts.corrigidas})`],
                   ["andamento", `Aguardando (${tabCounts.andamento})`],
-                  ["enviar", `Enviar (${tabCounts.enviar})`],
+                  ["enviar", `Fases para enviar (${tabCounts.enviar})`],
                   ["todas", "Todas as fases"],
                 ] as const
               ).map(([tab, label]) => (
@@ -403,6 +404,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                   submissionStatus={pickerPhase.submissionStatus}
                   submissionId={pickerPhase.submissionId}
                   allowResubmit={pickerPhase.allowResubmit}
+                  resubmitChargesQuota={pickerPhase.resubmitChargesQuota}
                   quotaBlocksNewUpload={pickerPhase.quotaBlocksNewUpload}
                   correction={pickerPhase.correction}
                   corrector={pickerPhase.corrector}
@@ -421,6 +423,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                     submissionStatus={phase.submissionStatus}
                     submissionId={phase.submissionId}
                     allowResubmit={phase.allowResubmit}
+                    resubmitChargesQuota={phase.resubmitChargesQuota}
                     quotaBlocksNewUpload={phase.quotaBlocksNewUpload}
                     correction={phase.correction}
                     corrector={phase.corrector}

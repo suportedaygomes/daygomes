@@ -18,6 +18,7 @@ type MemberPhaseCardProps = {
   submissionStatus: SubmissionStatus;
   submissionId: string | null;
   allowResubmit: boolean;
+  resubmitChargesQuota?: boolean;
   quotaBlocksNewUpload?: boolean;
   correction?: {
     grade: number | null;
@@ -43,6 +44,7 @@ export function MemberPhaseCard({
   submissionStatus,
   submissionId,
   allowResubmit,
+  resubmitChargesQuota = false,
   quotaBlocksNewUpload = false,
   correction,
   corrector,
@@ -140,7 +142,9 @@ export function MemberPhaseCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {allowResubmit ? (
             <p className="text-sm text-beige sm:basis-full">
-              Reenvio liberado pelo corretor. Envie a atividade novamente nesta fase.
+              {resubmitChargesQuota
+                ? "Reenvio liberado pelo corretor. Este envio usará 1 correção do seu plano."
+                : "Reenvio gratuito liberado pelo corretor. Não consome outra correção do plano."}
             </p>
           ) : null}
           <label className="btn-secondary btn-sm w-full cursor-pointer sm:w-auto">
