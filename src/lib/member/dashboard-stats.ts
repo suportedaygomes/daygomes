@@ -11,8 +11,13 @@ import {
 import {
   daysUntilDeadline,
   memberNeedsPhaseSubmission,
+  MS_PER_DAY,
 } from "@/lib/editais/phase-submission-pending";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+/** Sem alertas de “prazo se aproximando” logo após a inscrição, exceto prazos urgentes. */
+const ENROLLMENT_DEADLINE_GRACE_MS = 3 * MS_PER_DAY;
+const URGENT_DEADLINE_DAYS_LEFT = 2;
 
 export type MemberNotification = {
   id: string;
@@ -21,6 +26,13 @@ export type MemberNotification = {
   body: string;
   href: string;
   sortAt: string;
+};
+
+const NOTIFICATION_KIND_PRIORITY: Record<MemberNotification["kind"], number> = {
+  correction: 0,
+  support: 1,
+  resubmit: 2,
+  deadline: 3,
 };
 
 export type MemberEnrollmentSummary = {
@@ -125,8 +137,11 @@ export async function getMemberDashboardStats(
     const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
 
     let enrollmentSubmissions = 0;
-    let enrollmentOpen = 0;
+    const pendingTrackKeys = new Set<string>();
     let nextDeadline: Date | null = null;
+    const deadlineCandidates: MemberNotification[] = [];
+    const enrolledMs = new Date(enrollment.created_at).getTime();
+    const isNewEnrollment = now - enrolledMs < ENROLLMENT_DEADLINE_GRACE_MS;
 
     for (const phase of phases ?? []) {
       const trackKey = `${phase.cargo_id}:${phase.activity_kind}`;
@@ -148,7 +163,7 @@ export async function getMemberDashboardStats(
       const allowResubmit = correction?.allow_resubmit ?? false;
 
       if (isOpen && memberNeedsPhaseSubmission(submission ?? null, allowResubmit)) {
-        enrollmentOpen += 1;
+        pendingTrackKeys.add(trackKey);
       }
       const gradeValue = parseSubmissionGrade(correction?.grade);
 
@@ -190,12 +205,20 @@ export async function getMemberDashboardStats(
         pendingActionCount += 1;
 
         const daysLeft = daysUntilDeadline(phaseDeadlineAt, now);
-        if (daysLeft >= 0 && daysLeft <= 7) {
-          notifications.push({
-            id: `deadline-${phase.id}`,
-            kind: allowResubmit ? "resubmit" : "deadline",
-            title: allowResubmit ? "Reenvio liberado" : "Prazo se aproximando",
-            body: `${phase.title}: ${daysLeft === 0 ? "encerra hoje" : `faltam ${daysLeft} dia(s)`}`,
+        const isUrgentDeadline = daysLeft >= 0 && daysLeft <= URGENT_DEADLINE_DAYS_LEFT;
+        const showApproachingDeadline =
+          daysLeft >= 0 &&
+          daysLeft <= 7 &&
+          (!isNewEnrollment || isUrgentDeadline);
+
+        if (showApproachingDeadline && !allowResubmit) {
+          deadlineCandidates.push({
+            id: `deadline-${enrollment.id}-${phase.id}`,
+            kind: "deadline",
+            title: "Prazo se aproximando",
+            body: `${editalTitle} · ${phase.title}: ${
+              daysLeft === 0 ? "encerra hoje" : `faltam ${daysLeft} dia(s)`
+            }`,
             href: "/painel/editais",
             sortAt: phaseDeadlineAt,
           });
@@ -221,7 +244,14 @@ export async function getMemberDashboardStats(
       }
     }
 
-    if (enrollmentOpen > 0) {
+    if (deadlineCandidates.length > 0) {
+      deadlineCandidates.sort(
+        (a, b) => new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime(),
+      );
+      notifications.push(deadlineCandidates[0]);
+    }
+
+    if (pendingTrackKeys.size > 0) {
       phasesOpenCount += 1;
     }
 
@@ -240,7 +270,7 @@ export async function getMemberDashboardStats(
       editalTitle,
       cargoName,
       phasesTotal,
-      phasesOpen: enrollmentOpen,
+      phasesOpen: pendingTrackKeys.size,
       submissionsCount: enrollmentSubmissions,
       nextDeadlineAt: nextDeadline?.toISOString() ?? null,
       averageGrade,
@@ -268,13 +298,16 @@ export async function getMemberDashboardStats(
     }
   }
 
-  notifications.sort(
-    (a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime(),
-  );
-
   const dedupedNotifications = notifications.filter(
     (item, index, arr) => arr.findIndex((x) => x.id === item.id) === index,
   );
+
+  dedupedNotifications.sort((a, b) => {
+    const priorityDiff =
+      NOTIFICATION_KIND_PRIORITY[a.kind] - NOTIFICATION_KIND_PRIORITY[b.kind];
+    if (priorityDiff !== 0) return priorityDiff;
+    return new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime();
+  });
 
   recentCorrections.sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -287,7 +320,7 @@ export async function getMemberDashboardStats(
     finalizedActivitiesCount,
     pendingActionCount,
     enrollments: enrollmentSummaries,
-    notifications: dedupedNotifications.slice(0, 8),
+    notifications: dedupedNotifications.slice(0, 5),
     recentCorrections: recentCorrections.slice(0, 5),
   };
 }

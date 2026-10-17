@@ -128,7 +128,10 @@ export function MemberDashboard({ firstName, stats }: MemberDashboardProps) {
                 <p className="font-medium">{item.editalTitle}</p>
                 <p className="mt-1 text-sm text-muted">Cargo: {item.cargoName}</p>
                 <p className="mt-2 text-xs text-muted">
-                  {item.phasesOpen} fase(s) em aberto · {item.submissionsCount}{" "}
+                  {item.phasesOpen > 0
+                    ? `${item.phasesOpen} modalidade(s) com envio pendente`
+                    : "Sem envio pendente"}{" "}
+                  · {item.submissionsCount}{" "}
                   {item.submissionsCount === 1 ? "correção definitiva" : "correções definitivas"}
                 </p>
                 {item.averageGrade != null ? (
