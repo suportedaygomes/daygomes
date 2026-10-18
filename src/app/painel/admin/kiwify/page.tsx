@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { KiwifyMappingForm } from "@/components/painel/kiwify-mapping-form";
+import { KiwifyMappingList } from "@/components/painel/kiwify-mapping-list";
+import { KiwifyOrdersPanel } from "@/components/painel/kiwify-orders-panel";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
@@ -29,17 +31,86 @@ export default async function AdminKiwifyPage() {
   const { data: mappings } = await supabase
     .from("kiwify_product_mappings")
     .select(
-      "kiwify_product_id, kiwify_product_name, is_active, correction_quota, editais(title)",
+      "kiwify_product_id, kiwify_product_name, is_active, correction_quota, edital_id, editais(title)",
     )
     .order("created_at", { ascending: false });
+
+  const mappingRows = (mappings ?? []).map((row) => {
+    const edital = Array.isArray(row.editais) ? row.editais[0] : row.editais;
+    return {
+      kiwify_product_id: row.kiwify_product_id,
+      kiwify_product_name: row.kiwify_product_name,
+      is_active: row.is_active,
+      correction_quota: row.correction_quota,
+      edital_id: row.edital_id,
+      editalTitle: edital?.title ?? "—",
+    };
+  });
 
   const { data: orders } = await supabase
     .from("kiwify_order_events")
     .select(
-      "order_id, webhook_event_type, customer_email, access_email_sent, created_user, processed_at",
+      "order_id, webhook_event_type, customer_email, access_email_sent, created_user, processed_at, profile_id, enrollment_id, kiwify_product_id",
     )
     .order("processed_at", { ascending: false })
     .limit(20);
+
+  const orderIds = (orders ?? []).map((o) => o.order_id);
+  const { data: emailLogs } = orderIds.length
+    ? await supabase
+        .from("kiwify_access_emails")
+        .select("order_id, status, error_message")
+        .in("order_id", orderIds)
+    : { data: [] as { order_id: string | null; status: string; error_message: string | null }[] };
+
+  const emailErrorByOrder = new Map(
+    (emailLogs ?? []).map((row) => [row.order_id, row.error_message]),
+  );
+
+  type OrderRow = NonNullable<typeof orders>[number];
+
+  function describeOrder(order: OrderRow) {
+    const linked = Boolean(order.profile_id && order.enrollment_id);
+    const userLabel = !linked
+      ? "acesso não liberado (produto sem mapeamento ou inativo)"
+      : order.created_user
+        ? "conta criada neste pedido"
+        : "conta já existia (ex.: outro pedido do mesmo e-mail)";
+
+    let emailLabel: string;
+    if (!linked) {
+      emailLabel = "e-mail não tentado";
+    } else if (order.access_email_sent) {
+      emailLabel = "e-mail enviado";
+    } else {
+      const err = emailErrorByOrder.get(order.order_id);
+      emailLabel = err ? `e-mail falhou (${err})` : "e-mail falhou";
+    }
+
+    return { userLabel, emailLabel, linked };
+  }
+
+  const orderListItems = (orders ?? []).map((order) => {
+    const { userLabel, emailLabel, linked } = describeOrder(order);
+    return {
+      orderId: order.order_id,
+      webhookEventType: order.webhook_event_type,
+      customerEmail: order.customer_email,
+      kiwifyProductId: order.kiwify_product_id,
+      emailLabel,
+      userLabel,
+      linked,
+      accessEmailSent: order.access_email_sent,
+    };
+  });
+
+  const { count: unlinkedTotal } = await supabase
+    .from("kiwify_order_events")
+    .select("*", { count: "exact", head: true })
+    .is("profile_id", null)
+    .in("webhook_event_type", ["order_approved", "compra_aprovada"]);
+
+  const unlinkedCount = unlinkedTotal ?? 0;
 
   const webhookUrl = `${siteUrl.replace(/\/$/, "")}/api/webhooks/kiwify?token=SEU_TOKEN`;
 
@@ -79,41 +150,18 @@ export default async function AdminKiwifyPage() {
         </section>
 
         <section className="panel-card">
-          <h2 className="panel-title">Mapeamentos ativos</h2>
-          <ul className="mt-4 flex flex-col gap-2 text-sm">
-            {(mappings ?? []).map((row) => {
-              const edital = Array.isArray(row.editais) ? row.editais[0] : row.editais;
-              return (
-                <li key={row.kiwify_product_id} className="rounded-xl border border-white/8 p-3">
-                  <p className="font-medium">{row.kiwify_product_name ?? row.kiwify_product_id}</p>
-                  <p className="text-muted">
-                    {edital?.title ?? "—"} ·{" "}
-                    {row.correction_quota === 0
-                      ? "só acesso (0 correções)"
-                      : `${row.correction_quota} correção(ões)`}
-                  </p>
-                </li>
-              );
-            })}
-            {!mappings?.length ? (
-              <li className="text-muted">Nenhum mapeamento cadastrado.</li>
-            ) : null}
-          </ul>
+          <h2 className="panel-title">Mapeamentos cadastrados</h2>
+          <div className="mt-4">
+            <KiwifyMappingList mappings={mappingRows} editais={editalOptions} />
+          </div>
         </section>
       </div>
 
       <section className="panel-card">
         <h2 className="panel-title">Últimos pedidos processados</h2>
-        <ul className="mt-4 flex flex-col gap-2 text-sm">
-          {(orders ?? []).map((order) => (
-            <li key={order.order_id} className="text-muted">
-              {order.order_id} · {order.webhook_event_type} · {order.customer_email} · e-mail{" "}
-              {order.access_email_sent ? "enviado" : "falhou"} ·{" "}
-              {order.created_user ? "usuário novo" : "usuário existente"}
-            </li>
-          ))}
-          {!orders?.length ? <li className="text-muted">Nenhum pedido ainda.</li> : null}
-        </ul>
+        <div className="mt-4">
+          <KiwifyOrdersPanel orders={orderListItems} unlinkedCount={unlinkedCount} />
+        </div>
       </section>
     </PainelPage>
   );
