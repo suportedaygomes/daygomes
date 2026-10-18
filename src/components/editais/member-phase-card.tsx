@@ -5,6 +5,7 @@ import { CorrectorPublicInline } from "@/components/editais/corrector-public-inl
 import { MembroCorrecaoCardActions } from "@/components/editais/membro-correcao-actions";
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
 import { MemberPhaseStatusBadge } from "@/components/editais/member-phase-status-badge";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type SubmissionStatus = "enviado" | "em_correcao" | "corrigido" | null;
 
@@ -110,7 +111,7 @@ export function MemberPhaseCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-purple">Fase {phaseNumber}</p>
+            <p className="text-sm font-semibold text-purple">{themeLabel(phaseNumber)}</p>
             <MemberPhaseStatusBadge phase={phaseForBadge} />
             {showCorrection && correction?.grade != null ? (
               <span className="text-sm font-semibold tabular-nums text-emerald-200">
@@ -129,12 +130,12 @@ export function MemberPhaseCard({
 
       {awaitingCorrection ? (
         <p className="text-sm text-beige">
-          Atividade enviada. Esta fase fica bloqueada até o corretor publicar a correção.
+          Atividade enviada. Este tema fica bloqueado até o corretor publicar a correção.
         </p>
       ) : quotaBlocksNewUpload && !submissionStatus ? (
         <p className="text-sm text-amber-200">
-          Você já usou todas as correções da mentoria. Escolha outra fase só se o corretor liberar
-          reenvio em uma fase já enviada.
+          Você já usou todas as correções da mentoria. Escolha outro tema só se o corretor liberar
+          reenvio em um tema já enviado.
         </p>
       ) : expired && !submissionStatus ? (
         <p className="text-sm text-red-300">Prazo encerrado.</p>
@@ -169,7 +170,7 @@ export function MemberPhaseCard({
           </button>
         </div>
       ) : submissionStatus === "corrigido" ? (
-        <p className="text-sm text-muted">Fase corrigida. Reenvio somente se o corretor liberar.</p>
+        <p className="text-sm text-muted">Tema corrigido. Reenvio somente se o corretor liberar.</p>
       ) : null}
 
       {file ? (
@@ -215,7 +216,7 @@ export function MemberPhaseCard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-semibold">
-                Fase {phaseNumber} · {title}
+                {themeLabel(phaseNumber)} · {title}
               </span>
               <MemberPhaseStatusBadge phase={phaseForBadge} />
               {correction?.grade != null ? (

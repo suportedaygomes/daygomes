@@ -1,6 +1,7 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
 import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type SendCorrectionNoticeEmailInput = {
   to: string;
@@ -16,7 +17,7 @@ export async function sendCorrectionNoticeEmail(
   input: SendCorrectionNoticeEmailInput,
 ): Promise<SendResult> {
   const greeting = escapeHtml(input.fullName.trim() || "Olá");
-  const phaseLabel = `Fase ${input.phaseNumber} — ${input.phaseTitle}`;
+  const phaseLabel = `${themeLabel(input.phaseNumber)} — ${input.phaseTitle}`;
 
   const bodyHtml = `
       <p style="margin:0 0 12px;">${greeting},</p>

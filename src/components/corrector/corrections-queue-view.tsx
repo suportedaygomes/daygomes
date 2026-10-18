@@ -8,6 +8,7 @@ import {
   filterPendingSubmissions,
   type CorrectorQueueFilters,
 } from "@/lib/corrector/queue-summaries";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type CorrectionsQueueViewProps = {
   submissions: PendingSubmissionListRow[];
@@ -88,7 +89,7 @@ export function CorrectionsQueueView({
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Controle por edital</h2>
         <p className="text-sm text-muted">
-          Redações aguardando correção e prazo da fase mais próximo em cada edital.
+          Redações aguardando correção e prazo do tema mais próximo em cada edital.
         </p>
         <div className="grid gap-3 lg:grid-cols-2">
           {summaries.map((summary) => (
@@ -256,15 +257,17 @@ export function CorrectionsQueueView({
                   {submission.editalTitle}
                 </p>
                 <p className="text-sm text-muted">
-                  {submission.cargoName} · {submission.phaseTitle} · Fase{" "}
-                  {submission.phaseNumber ?? "—"}
+                  {submission.cargoName} · {submission.phaseTitle}
+                  {submission.phaseNumber != null
+                    ? ` · ${themeLabel(submission.phaseNumber)}`
+                    : ""}
                 </p>
                 <p className="mt-2 text-xs text-muted">
                   Enviado em {new Date(submission.submitted_at).toLocaleString("pt-BR")}
                   {submission.phaseDeadlineAt ? (
                     <>
                       {" "}
-                      · Prazo da fase: {formatDeadline(submission.phaseDeadlineAt)}
+                      · Prazo do tema: {formatDeadline(submission.phaseDeadlineAt)}
                     </>
                   ) : null}
                 </p>

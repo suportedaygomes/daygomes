@@ -88,7 +88,7 @@ export async function listPendingSubmissionsForStaff(
       editalTitle: edital?.title ?? "Edital",
       cargoId: cargo?.id ?? "",
       cargoName,
-      phaseTitle: phase?.title ?? "Fase",
+      phaseTitle: phase?.title ?? "Tema",
       phaseNumber: phase?.phase_number ?? null,
       phaseDeadlineAt: phase?.deadline_at ?? "",
       isResubmit: resubmitIds.has(row.id),

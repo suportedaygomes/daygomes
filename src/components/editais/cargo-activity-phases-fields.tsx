@@ -27,14 +27,14 @@ export function CargoActivityPhasesFields({ activityKind, phases, onChange }: Pr
           className="rounded-xl border border-white/8 p-3"
         >
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-semibold">Fase {phaseIndex + 1}</p>
+            <p className="text-sm font-semibold">Tema {phaseIndex + 1}</p>
             {phases.length > 1 ? (
               <button
                 type="button"
                 className="text-xs text-red-300"
                 onClick={() => onChange(phases.filter((_, i) => i !== phaseIndex))}
               >
-                Remover fase
+                Remover tema
               </button>
             ) : null}
           </div>
@@ -72,7 +72,7 @@ export function CargoActivityPhasesFields({ activityKind, phases, onChange }: Pr
         className="btn-secondary btn-sm w-fit"
         onClick={() => onChange([...phases, emptyPhase()])}
       >
-        Adicionar fase ({label})
+        Adicionar tema ({label})
       </button>
     </div>
   );

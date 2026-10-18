@@ -210,8 +210,8 @@ export default async function MembroEditaisPage() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Meus editais</h1>
         <p className="mt-2 text-muted">
-          Escolha cargo, modalidade e fase dentro da sua cota. Com 4 envios e 5 fases possíveis, você
-          decide quais 4 enviar; reenvio na mesma fase só quando o corretor liberar.
+          Escolha cargo, modalidade e tema dentro da sua cota. Com 4 envios e 5 temas possíveis, você
+          decide quais 4 enviar; reenvio no mesmo tema só quando o corretor liberar.
         </p>
       </div>
 

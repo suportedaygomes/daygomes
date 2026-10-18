@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (!phase) {
-    return NextResponse.json({ error: "Fase inválida." }, { status: 400 });
+    return NextResponse.json({ error: "Tema inválido." }, { status: 400 });
   }
 
   const cargo = Array.isArray(phase.edital_cargos)
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     : phase.edital_cargos;
 
   if (!cargo || cargo.edital_id !== enrollment.edital_id) {
-    return NextResponse.json({ error: "Esta fase não pertence à sua mentoria." }, { status: 403 });
+    return NextResponse.json({ error: "Este tema não pertence à sua mentoria." }, { status: 403 });
   }
 
   const admin = createAdminClient();
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
   });
 
   if (isMemberPhaseDeadlineExpired(deadlineAt)) {
-    return NextResponse.json({ error: "O prazo desta fase já encerrou." }, { status: 400 });
+    return NextResponse.json({ error: "O prazo deste tema já encerrou." }, { status: 400 });
   }
 
   const { data: existing } = await supabase
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       existing.status === "enviado" || existing.status === "em_correcao";
     if (pending) {
       return NextResponse.json(
-        { error: "Atividade enviada. Aguarde a correção para esta fase." },
+        { error: "Atividade enviada. Aguarde a correção para este tema." },
         { status: 400 },
       );
     }
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
       if (!correction?.allow_resubmit) {
         return NextResponse.json(
-          { error: "Esta fase já foi corrigida. Reenvio não liberado." },
+          { error: "Este tema já foi corrigido. Reenvio não liberado." },
           { status: 400 },
         );
       }
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
         }
       }
     } else {
-      return NextResponse.json({ error: "Você já enviou esta fase." }, { status: 400 });
+      return NextResponse.json({ error: "Você já enviou este tema." }, { status: 400 });
     }
   } else {
     const used = await countEnrollmentCorrectionQuotaUsed(enrollmentId);
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Você já utilizou todas as correções incluídas na sua mentoria. Escolha outra fase apenas se o corretor liberar reenvio.",
+            "Você já utilizou todas as correções incluídas na sua mentoria. Escolha outro tema apenas se o corretor liberar reenvio.",
         },
         { status: 400 },
       );

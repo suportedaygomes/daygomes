@@ -26,7 +26,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "3",
     title: "3. Serviços oferecidos",
     paragraphs: [
-      "A plataforma permite, conforme o perfil de acesso (membro, corretor ou administrador), participar de editais e cargos vinculados, enviar arquivos de atividades por fase, acompanhar prazos, receber correções e notas, visualizar feedback dos corretores, interagir com suporte e, quando aplicável, gerenciar usuários e conteúdos.",
+      "A plataforma permite, conforme o perfil de acesso (membro, corretor ou administrador), participar de editais e cargos vinculados, enviar arquivos de atividades por tema, acompanhar prazos, receber correções e notas, visualizar feedback dos corretores, interagir com suporte e, quando aplicável, gerenciar usuários e conteúdos.",
       "Parte do acesso pode ser liberada mediante compra em parceiros (por exemplo, integração com a Kiwify) ou por cadastro realizado pela administração. Os direitos de uso são pessoais e intransferíveis, salvo disposição expressa em contrato ou comunicado oficial.",
       "A Professora Day Gomes trabalha para manter a plataforma disponível e segura, mas não garante funcionamento ininterrupto. Manutenções, atualizações ou falhas de terceiros (hospedagem, internet, provedores de e-mail ou armazenamento) podem causar indisponibilidade temporária.",
     ],
@@ -35,7 +35,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "4",
     title: "4. Envio de atividades e regras dos editais",
     paragraphs: [
-      "Cada edital, cargo e fase possui regras próprias de prazo, formato de arquivo e critérios de correção, informados na interface da plataforma. O envio fora do prazo, em formato não aceito ou em desacordo com as instruções pode impedir a correção ou a contagem de nota, conforme as regras do edital.",
+      "Cada edital, cargo e tema possui regras próprias de prazo, formato de arquivo e critérios de correção, informados na interface da plataforma. O envio fora do prazo, em formato não aceito ou em desacordo com as instruções pode impedir a correção ou a contagem de nota, conforme as regras do edital.",
       "Ao enviar arquivos, você declara ser titular dos direitos necessários ou possuir autorização para o conteúdo enviado, e concede à Professora Day Gomes licença não exclusiva para armazenar, processar, exibir ao corretor designado e utilizar o material exclusivamente para fins de correção, registro acadêmico e melhoria do serviço, nos limites da lei.",
       "É proibido enviar conteúdo ilegal, difamatório, que viole direitos de terceiros, que contenha malware ou que tenha sido plagiado de forma a configurar violação de direitos autorais ou de concurso.",
     ],
@@ -44,7 +44,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "5",
     title: "5. Correções, notas e comunicações",
     paragraphs: [
-      "As correções são realizadas por corretores habilitados ou pela equipe administrativa. As notas, comentários e orientações (incluindo liberação de reenvio ou de fase seguinte) têm caráter educacional e vinculam-se às regras de cada edital. A Professora Day Gomes não assegura resultado em concursos públicos ou seleções externas.",
+      "As correções são realizadas por corretores habilitados ou pela equipe administrativa. As notas, comentários e orientações (incluindo liberação de reenvio ou de tema seguinte) têm caráter educacional e vinculam-se às regras de cada edital. A Professora Day Gomes não assegura resultado em concursos públicos ou seleções externas.",
       "Comunicações operacionais (correção disponível, prazos, acesso liberado, respostas de suporte) podem ser enviadas por e-mail e exibidas no painel. É sua responsabilidade manter um e-mail válido e acompanhar as mensagens.",
     ],
   },
@@ -134,7 +134,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
     paragraphs: [
       "Dados de cadastro e perfil: nome, e-mail, CPF (quando informado), data de nascimento, telefone/WhatsApp, foto de perfil (avatar), biografia opcional e papel na plataforma (membro, corretor ou administrador).",
       "Dados de autenticação: credenciais gerenciadas pelo provedor de autenticação (Supabase Auth), incluindo registros de sessão e tokens em cookies estritamente necessários ao login.",
-      "Dados de uso educacional: vínculos a editais e cargos, fases liberadas, arquivos enviados (redações e anexos), metadados de envio (data, tipo de arquivo, tamanho), correções, notas, comentários de corretores, marcações em documentos e histórico de status.",
+      "Dados de uso educacional: vínculos a editais e cargos, temas liberados, arquivos enviados (redações e anexos), metadados de envio (data, tipo de arquivo, tamanho), correções, notas, comentários de corretores, marcações em documentos e histórico de status.",
       "Dados de suporte: conteúdo de chamados, e-mail e WhatsApp informados, imagens anexadas e respostas da equipe.",
       "Dados de comunicação: envio de e-mails transacionais (correção, prazos, acesso, suporte) por meio do provedor Resend, com endereço de destino e conteúdo da mensagem.",
       "Dados de pagamento e integração: quando a compra ocorre via Kiwify ou integração similar, recebemos identificadores e status da transação necessários para liberar ou revogar acesso; dados completos de cartão não são armazenados pela Professora Day Gomes no ambiente da plataforma.",

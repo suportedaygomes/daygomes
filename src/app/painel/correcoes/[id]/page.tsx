@@ -112,7 +112,7 @@ export default async function CorrecaoDetailPage({
         <CorrectionForm
           submissionId={id}
           memberName={member?.full_name ?? "Aluno"}
-          phaseTitle={phase?.title ?? "Fase"}
+          phaseTitle={phase?.title ?? "Tema"}
           downloadUrl={`/api/submissions/${id}/download`}
           evaluationRubric={evaluationRubric}
           initial={

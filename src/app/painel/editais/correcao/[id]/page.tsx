@@ -6,6 +6,7 @@ import { MembroCorrecaoActions } from "@/components/editais/membro-correcao-acti
 import { SubmissionMarkupViewer } from "@/components/editais/submission-markup-viewer";
 import { getAvatarPublicUrl, getCurrentProfile } from "@/lib/auth/profile";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
+import { themeLabel } from "@/lib/editais/theme-label";
 import { getCorrectorPublicProfile } from "@/lib/corrector/public-profile";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import type { MarkupAnnotation } from "@/lib/markup/types";
@@ -85,8 +86,8 @@ export default async function MembroCorrecaoDetalhePage({
         </Link>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Correção da atividade</h1>
         <p className="mt-2 text-muted">
-          {phase?.title ?? "Fase"}
-          {phase?.phase_number != null ? ` · Fase ${phase.phase_number}` : ""}
+          {phase?.title ?? "Tema"}
+          {phase?.phase_number != null ? ` · ${themeLabel(phase.phase_number)}` : ""}
         </p>
       </div>
 

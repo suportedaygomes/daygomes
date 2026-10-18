@@ -26,7 +26,7 @@ export function SubmissionPeriodPerCargoHints({ submissionPeriodDays, cargos }: 
   if (!rows.length) {
     return (
       <p className="text-xs font-normal text-muted">
-        Adicione fases aos cargos para ver quantos dias o aluno terá em cada fase.
+        Adicione temas aos cargos para ver quantos dias o aluno terá em cada tema.
       </p>
     );
   }
@@ -39,8 +39,8 @@ export function SubmissionPeriodPerCargoHints({ submissionPeriodDays, cargos }: 
           <li key={`${cargo.label}-${cargo.phaseCount}`}>
             <span className="font-medium text-foreground">{cargo.label}</span>
             {" · "}
-            {cargo.phaseCount} fase{cargo.phaseCount === 1 ? "" : "s"}: ≈{" "}
-            <span className="text-purple">{formatDaysPerPhase(perPhase)}</span> dia(s) por fase
+            {cargo.phaseCount} tema{cargo.phaseCount === 1 ? "" : "s"}: ≈{" "}
+            <span className="text-purple">{formatDaysPerPhase(perPhase)}</span> dia(s) por tema
             (após liberar)
           </li>
         );

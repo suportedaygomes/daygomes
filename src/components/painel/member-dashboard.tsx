@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PainelBrandEyebrow } from "@/components/painel/painel-brand-eyebrow";
 import { PainelPage } from "@/components/painel/painel-page";
 import type { MemberDashboardStats, MemberNotification } from "@/lib/member/dashboard-stats";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type MemberDashboardProps = {
   firstName: string;
@@ -51,7 +52,7 @@ export function MemberDashboard({ firstName, stats }: MemberDashboardProps) {
             value={stats.phasesOpenCount}
             hint={
               stats.pendingActionCount > 0
-                ? `${stats.pendingActionCount} fase(s) para enviar`
+                ? `${stats.pendingActionCount} tema(s) para enviar`
                 : "Em dia"
             }
             accent={stats.pendingActionCount > 0}
@@ -139,7 +140,7 @@ export function MemberDashboard({ firstName, stats }: MemberDashboardProps) {
                     Média: {item.averageGrade.toLocaleString("pt-BR")}
                     <span className="font-normal text-muted">
                       {" "}
-                      · {item.phasesTotal} {item.phasesTotal === 1 ? "fase" : "fases"} no
+                      · {item.phasesTotal} {item.phasesTotal === 1 ? "tema" : "temas"} no
                       edital
                     </span>
                   </p>
@@ -182,7 +183,7 @@ export function MemberDashboard({ firstName, stats }: MemberDashboardProps) {
                   className="block rounded-xl border border-white/10 bg-field/50 px-3 py-2 text-sm transition hover:border-purple/40"
                 >
                   <p className="font-medium">
-                    {item.editalTitle} · Fase {item.phaseNumber}
+                    {item.editalTitle} · {themeLabel(item.phaseNumber)}
                   </p>
                   <p className="mt-1 text-muted">{item.phaseTitle}</p>
                   <p className="mt-1 text-xs text-muted">

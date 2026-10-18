@@ -13,7 +13,7 @@ export default async function NovoEditalPage() {
     <PainelPage>
       <h1 className="text-3xl font-semibold tracking-tight">Novo edital</h1>
       <p className="mt-2 text-muted">
-        Defina cargos, quantidade de vagas e as fases com prazo de envio.
+        Defina cargos, quantidade de vagas e os temas com prazo de envio.
       </p>
       <div className="mt-8">
         <CreateEditalForm />

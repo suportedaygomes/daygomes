@@ -35,7 +35,7 @@ export function MemberCorrectionQuotaPanel({
           Correções do plano
         </p>
         <p className="mt-2 text-lg font-semibold text-foreground">
-          Sua mentoria inclui o conteúdo e as fases, mas{" "}
+          Sua mentoria inclui o conteúdo e os temas, mas{" "}
           <strong className="text-amber-100">nenhuma correção</strong> no momento.
         </p>
         <p className="mt-2 text-sm text-muted">
@@ -91,7 +91,8 @@ export function MemberCorrectionQuotaPanel({
               {correctionsRemaining}
             </span>
             <span className="text-lg text-muted">
-              de {correctionQuota} correção{correctionQuota === 1 ? "" : "ões"} disponíveis
+              de {correctionQuota}{" "}
+              {correctionQuota === 1 ? "correção" : "correções"} disponíveis
             </span>
           </p>
           <p className="mt-2 text-sm text-muted">
@@ -122,11 +123,11 @@ export function MemberCorrectionQuotaPanel({
       </div>
       <ul className="mt-4 flex flex-col gap-1.5 border-t border-white/10 pt-4 text-sm text-muted">
         <li>
-          <strong className="font-medium text-foreground">1ª vez em uma fase</strong> → usa{" "}
+          <strong className="font-medium text-foreground">1ª vez em um tema</strong> → usa{" "}
           <strong className="text-foreground">1</strong> correção do plano.
         </li>
         <li>
-          <strong className="font-medium text-foreground">Reenvio gratuito</strong> na mesma fase →{" "}
+          <strong className="font-medium text-foreground">Reenvio gratuito</strong> no mesmo tema →{" "}
           <strong className="text-foreground">não</strong> consome outra correção.
         </li>
         <li>
@@ -134,7 +135,7 @@ export function MemberCorrectionQuotaPanel({
           corretor escolher) → usa <strong className="text-foreground">1</strong> correção do plano.
         </li>
         <li>
-          Enviar em <strong className="font-medium text-foreground">outra fase</strong> pela
+          Enviar em <strong className="font-medium text-foreground">outro tema</strong> pela
           primeira vez → usa outra correção do plano.
         </li>
       </ul>

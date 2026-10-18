@@ -84,7 +84,7 @@ export function CorrectionForm({
       <div>
         <p className="text-sm text-muted">Aluno</p>
         <p className="font-semibold">{memberName}</p>
-        <p className="mt-2 text-sm text-muted">Fase</p>
+        <p className="mt-2 text-sm text-muted">Tema</p>
         <p className="font-medium">{phaseTitle}</p>
       </div>
 
@@ -149,7 +149,7 @@ export function CorrectionForm({
       </label>
 
       <fieldset className="flex flex-col gap-3 rounded-xl border border-[color:var(--border-subtle)] p-4">
-        <legend className="px-1 text-sm font-medium">Reenvio nesta fase (após salvar)</legend>
+        <legend className="px-1 text-sm font-medium">Reenvio neste tema (após salvar)</legend>
         <label className="flex items-start gap-2 text-sm">
           <input
             type="radio"
@@ -173,7 +173,7 @@ export function CorrectionForm({
           />
           <span>
             <strong className="text-foreground">Reenvio gratuito</strong> — aluno pode enviar de
-            novo nesta fase <strong className="text-foreground">sem</strong> gastar correção do
+            novo neste tema <strong className="text-foreground">sem</strong> gastar correção do
             plano.
           </span>
         </label>
@@ -187,7 +187,7 @@ export function CorrectionForm({
           />
           <span>
             <strong className="text-foreground">Reenvio com consumo de cota</strong> — o próximo
-            envio nesta fase usa <strong className="text-foreground">1 correção</strong> do plano
+            envio neste tema usa <strong className="text-foreground">1 correção</strong> do plano
             do aluno (ex.: de 4 passa a 3).
           </span>
         </label>

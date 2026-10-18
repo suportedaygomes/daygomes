@@ -30,7 +30,7 @@ export function PhaseDescriptionEditor({
   value,
   onChange,
   placeholder = "Orientações para o aluno…",
-  "aria-label": ariaLabel = "Descrição da fase",
+  "aria-label": ariaLabel = "Descrição do tema",
 }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   /** null = ainda não hidratou o DOM com `value` (evita sobrescrever com vazio no blur). */

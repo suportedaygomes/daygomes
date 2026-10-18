@@ -18,23 +18,23 @@ export function validateCreateCargo(cargo: CargoInput): { ok: true } | { ok: fal
   if (cargo.offersDissertativa && !cargo.phasesDissertativa.length) {
     return {
       ok: false,
-      message: `Adicione fases de redação dissertativa no cargo ${cargoName}.`,
+      message: `Adicione temas de redação dissertativa no cargo ${cargoName}.`,
     };
   }
 
   if (cargo.offersEstudoCaso && !cargo.phasesEstudoCaso.length) {
     return {
       ok: false,
-      message: `Adicione fases de estudo de caso no cargo ${cargoName}.`,
+      message: `Adicione temas de estudo de caso no cargo ${cargoName}.`,
     };
   }
 
   for (const phase of [...cargo.phasesDissertativa, ...cargo.phasesEstudoCaso]) {
     if (!phase.title.trim()) {
-      return { ok: false, message: "Título da fase é obrigatório." };
+      return { ok: false, message: "Título do tema é obrigatório." };
     }
     if (!phaseDescriptionPlainText(phase.description).length) {
-      return { ok: false, message: "Descrição da fase é obrigatória." };
+      return { ok: false, message: "Descrição do tema é obrigatória." };
     }
   }
 
@@ -60,23 +60,23 @@ export function validateEditCargo(cargo: CargoEditInput): { ok: true } | { ok: f
   if (cargo.offersDissertativa && !dissertativa.length) {
     return {
       ok: false,
-      message: `Adicione fases de redação dissertativa no cargo ${cargoName}.`,
+      message: `Adicione temas de redação dissertativa no cargo ${cargoName}.`,
     };
   }
 
   if (cargo.offersEstudoCaso && !estudo.length) {
     return {
       ok: false,
-      message: `Adicione fases de estudo de caso no cargo ${cargoName}.`,
+      message: `Adicione temas de estudo de caso no cargo ${cargoName}.`,
     };
   }
 
   for (const phase of cargo.phases) {
     if (!phase.title.trim()) {
-      return { ok: false, message: "Título da fase é obrigatório." };
+      return { ok: false, message: "Título do tema é obrigatório." };
     }
     if (!phaseDescriptionPlainText(phase.description).length) {
-      return { ok: false, message: "Descrição da fase é obrigatória." };
+      return { ok: false, message: "Descrição do tema é obrigatória." };
     }
   }
 

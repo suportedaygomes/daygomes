@@ -2,6 +2,7 @@ import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
 import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
 import type { ReminderKind } from "@/lib/editais/phase-submission-pending";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type SendPhaseDeadlineReminderEmailInput = {
   to: string;
@@ -28,13 +29,13 @@ export async function sendPhaseDeadlineReminderEmail(
   input: SendPhaseDeadlineReminderEmailInput,
 ): Promise<SendResult> {
   const greeting = escapeHtml(input.fullName.trim() || "Olá");
-  const phaseLabel = `Fase ${input.phaseNumber} — ${input.phaseTitle}`;
+  const phaseLabel = `${themeLabel(input.phaseNumber)} — ${input.phaseTitle}`;
   const deadlineLabel = formatDeadline(input.deadlineAt);
   const daysLabel = input.reminderKind === "7_days" ? "7 dias" : "1 dia";
 
   const actionLine = input.isResubmit
-    ? "O corretor liberou o <strong style=\"color:#f6f3ef;\">reenvio</strong> desta fase. Envie a atividade corrigida antes do prazo."
-    : "Você ainda não enviou a atividade desta fase. Não perca o prazo.";
+    ? "O corretor liberou o <strong style=\"color:#f6f3ef;\">reenvio</strong> deste tema. Envie a atividade corrigida antes do prazo."
+    : "Você ainda não enviou a atividade deste tema. Não perca o prazo.";
 
   const subject =
     input.reminderKind === "7_days"

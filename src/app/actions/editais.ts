@@ -88,7 +88,7 @@ async function insertPhasesForCargo(
     });
 
     if (phaseError) {
-      return { ok: false as const, message: "Não foi possível salvar as fases." };
+      return { ok: false as const, message: "Não foi possível salvar os temas." };
     }
   }
   return { ok: true as const };
@@ -404,7 +404,7 @@ export async function updateEdital(input: UpdateEditalInput) {
       if (submissionCount && submissionCount > 0) {
         return {
           ok: false,
-          message: "Não é possível remover uma fase que já recebeu envios.",
+          message: "Não é possível remover um tema que já recebeu envios.",
         };
       }
 
@@ -414,7 +414,7 @@ export async function updateEdital(input: UpdateEditalInput) {
         .eq("id", phaseRow.id);
 
       if (deletePhaseError) {
-        return { ok: false, message: "Não foi possível remover a fase." };
+        return { ok: false, message: "Não foi possível remover o tema." };
       }
     }
 
@@ -460,7 +460,7 @@ export async function updateEdital(input: UpdateEditalInput) {
       const phaseError = phaseResults.find(Boolean);
       if (phaseError) {
         console.error("[updateEdital] phase save failed", phaseError.message);
-        return { ok: false, message: "Não foi possível atualizar as fases." };
+        return { ok: false, message: "Não foi possível atualizar os temas." };
       }
     }
   }

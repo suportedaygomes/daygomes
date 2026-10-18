@@ -23,7 +23,7 @@ export default async function AdminEditaisPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Editais</h1>
-          <p className="mt-2 text-muted">Crie editais, cargos, fases e vincule membros.</p>
+          <p className="mt-2 text-muted">Crie editais, cargos, temas e vincule membros.</p>
         </div>
         <Link href="/painel/admin/editais/novo" className="btn-primary">
           Novo edital

@@ -8,6 +8,7 @@ import {
   isStaffRole,
 } from "@/lib/members/staff-member-profile";
 import { createClient } from "@/lib/supabase/server";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 export const dynamic = "force-dynamic";
 
@@ -60,8 +61,8 @@ export default async function StaffMembroDetailPage({
                   className="block rounded-xl border border-white/10 bg-field/50 px-3 py-2 text-sm transition hover:border-purple/40"
                 >
                   <p className="font-medium">
-                    {phase?.title ?? "Fase"}
-                    {phase?.phase_number != null ? ` · Fase ${phase.phase_number}` : ""}
+                    {phase?.title ?? "Tema"}
+                    {phase?.phase_number != null ? ` · ${themeLabel(phase.phase_number)}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     {submission.status} ·{" "}

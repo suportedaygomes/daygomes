@@ -147,8 +147,8 @@ export function CreateEditalForm() {
           />
         </label>
         <p className="text-xs font-normal text-muted">
-          Total por aluno após compra ou vínculo. O valor abaixo é dividido entre as fases de cada
-          cargo quando a fase é liberada.
+          Total por aluno após compra ou vínculo. O valor abaixo é dividido entre os temas de cada
+          cargo quando o tema é liberado.
         </p>
         <SubmissionPeriodPerCargoHints
           submissionPeriodDays={submissionPeriodDays}

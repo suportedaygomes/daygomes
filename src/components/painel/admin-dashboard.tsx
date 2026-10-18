@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PainelBrandEyebrow } from "@/components/painel/painel-brand-eyebrow";
 import { PainelPage } from "@/components/painel/painel-page";
 import type { AdminDashboardStats } from "@/lib/admin/dashboard-stats";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type AdminDashboardProps = {
   firstName: string;
@@ -105,7 +106,7 @@ export function AdminDashboard({ firstName, stats }: AdminDashboardProps) {
                   <p className="font-medium">{item.memberName}</p>
                   <p className="mt-1 text-sm text-muted">
                     {item.phaseTitle}
-                    {item.phaseNumber != null ? ` · Fase ${item.phaseNumber}` : ""}
+                    {item.phaseNumber != null ? ` · ${themeLabel(item.phaseNumber)}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-muted">
                     Enviado em {new Date(item.submittedAt).toLocaleString("pt-BR")}
@@ -125,7 +126,7 @@ export function AdminDashboard({ firstName, stats }: AdminDashboardProps) {
           <div>
             <h2 className="text-lg font-semibold">Sem envio no prazo</h2>
             <p className="mt-1 text-sm text-muted">
-              Fase com prazo encerrado e atividade ainda pendente (sem envio ou reenvio
+              Tema com prazo encerrado e atividade ainda pendente (sem envio ou reenvio
               obrigatório).
             </p>
           </div>
@@ -146,7 +147,7 @@ export function AdminDashboard({ firstName, stats }: AdminDashboardProps) {
                 <p className="font-medium">{item.memberName}</p>
                 <p className="mt-1 text-sm">{item.editalTitle}</p>
                 <p className="mt-1 text-sm text-muted">
-                  Cargo: {item.cargoName} · {item.phaseTitle} (fase {item.phaseNumber})
+                  Cargo: {item.cargoName} · {item.phaseTitle} ({themeLabel(item.phaseNumber)})
                 </p>
                 <p className="mt-1 text-xs text-muted">
                   Prazo encerrado em {new Date(item.deadlineAt).toLocaleString("pt-BR")}
@@ -156,7 +157,7 @@ export function AdminDashboard({ firstName, stats }: AdminDashboardProps) {
           ))}
           {!stats.missedDeadlines.length ? (
             <li className="text-sm text-muted">
-              Nenhum membro ativo com fase em atraso no momento.
+              Nenhum membro ativo com tema em atraso no momento.
             </li>
           ) : null}
         </ul>

@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PainelBrandEyebrow } from "@/components/painel/painel-brand-eyebrow";
 import { PainelPage } from "@/components/painel/painel-page";
 import type { CorrectorDashboardStats } from "@/lib/corrector/dashboard-stats";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type CorrectorDashboardProps = {
   firstName: string;
@@ -74,7 +75,7 @@ export function CorrectorDashboard({ firstName, stats }: CorrectorDashboardProps
                 <p className="font-medium">{item.memberName}</p>
                 <p className="mt-1 text-sm text-muted">
                   {item.phaseTitle}
-                  {item.phaseNumber != null ? ` · Fase ${item.phaseNumber}` : ""}
+                  {item.phaseNumber != null ? ` · ${themeLabel(item.phaseNumber)}` : ""}
                 </p>
                 <p className="mt-1 text-xs text-muted">
                   Enviado em {new Date(item.submittedAt).toLocaleString("pt-BR")}

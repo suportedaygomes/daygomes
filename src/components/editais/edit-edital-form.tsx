@@ -126,7 +126,7 @@ export function EditEditalForm({
       <div>
         <h2 className="panel-title">Editar edital</h2>
         <p className="mt-1 text-sm text-muted">
-          Altere título, cargos e fases a qualquer momento. Remover cargo ou fase com envios não é
+          Altere título, cargos e temas a qualquer momento. Remover cargo ou tema com envios não é
           permitido.
         </p>
       </div>
@@ -156,7 +156,7 @@ export function EditEditalForm({
           />
         </label>
         <p className="text-xs font-normal text-muted">
-          Total por aluno. Atualiza a estimativa por cargo conforme você altera fases ou o número de
+          Total por aluno. Atualiza a estimativa por cargo conforme você altera temas ou o número de
           dias.
         </p>
         <SubmissionPeriodPerCargoHints

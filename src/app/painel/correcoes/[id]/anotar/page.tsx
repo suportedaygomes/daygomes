@@ -72,7 +72,7 @@ export default async function AnotarEnvioPage({
       previewUrl={`/api/submissions/${id}/preview`}
       viewerMode={viewerMode}
       memberName={member?.full_name ?? "Aluno"}
-      phaseTitle={phase?.title ?? "Fase"}
+      phaseTitle={phase?.title ?? "Tema"}
     />
     </PainelPage>
   );

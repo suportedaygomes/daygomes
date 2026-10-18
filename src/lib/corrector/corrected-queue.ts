@@ -79,7 +79,7 @@ export async function listCorrectedSubmissionsForStaff(
       editalTitle: edital?.title ?? "Edital",
       cargoId: cargo?.id ?? "",
       cargoName: cargoLabel,
-      phaseTitle: phase?.title ?? "Fase",
+      phaseTitle: phase?.title ?? "Tema",
       phaseNumber: phase?.phase_number ?? null,
       grade: Number.isFinite(grade) ? grade : null,
       correctedAt: row.updated_at,

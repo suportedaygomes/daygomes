@@ -12,6 +12,7 @@ import {
   classifyMemberPhase,
   type MemberPhaseBucket,
 } from "@/lib/editais/member-phase-status";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 export type MemberPhaseView = {
   id: string;
@@ -201,7 +202,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
         />
         {enrollment.averageGrade != null ? (
           <p className="text-sm text-muted">
-            Média nas fases corrigidas:{" "}
+            Média nos temas corrigidos:{" "}
             <strong className="text-foreground">
               {enrollment.averageGrade.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
             </strong>
@@ -220,7 +221,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
           <div>
             <h3 className="panel-title">Correções recebidas</h3>
             <p className="mt-1 text-sm text-muted">
-              Fases já corrigidas nesta mentoria ({enrollment.editalTitle}). Clique para ver nota e
+              Temas já corrigidos nesta mentoria ({enrollment.editalTitle}). Clique para ver nota e
               feedback.
             </p>
           </div>
@@ -249,7 +250,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                 value={correctedSort}
                 onChange={(event) => setCorrectedSort(event.target.value as CorrectedSort)}
               >
-                <option value="phase">Cargo e número da fase</option>
+                <option value="phase">Cargo e número do tema</option>
                 <option value="grade_desc">Maior nota primeiro</option>
                 <option value="grade_asc">Menor nota primeiro</option>
               </select>
@@ -295,7 +296,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
               >
                 <div className="min-w-0">
                   <p className="font-medium">
-                    Fase {phase.phaseNumber} · {phase.title}
+                    {themeLabel(phase.phaseNumber)} · {phase.title}
                   </p>
                   <p className="text-xs text-muted">{phase.trackLabel}</p>
                 </div>
@@ -310,7 +311,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
         <section className="flex flex-col gap-4">
           <div className="panel-card flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <h3 className="panel-title">Enviar ou revisar uma fase</h3>
+              <h3 className="panel-title">Enviar ou revisar um tema</h3>
               <MemberCorrectionQuotaPanel
                 correctionQuota={enrollment.correctionQuota}
                 correctionsUsed={enrollment.correctionsUsed}
@@ -345,8 +346,8 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                 [
                   ["corrigidas", `Corrigidas (${tabCounts.corrigidas})`],
                   ["andamento", `Aguardando (${tabCounts.andamento})`],
-                  ["enviar", `Fases para enviar (${tabCounts.enviar})`],
-                  ["todas", "Todas as fases"],
+                  ["enviar", `Temas para enviar (${tabCounts.enviar})`],
+                  ["todas", "Todos os temas"],
                 ] as const
               ).map(([tab, label]) => (
                 <button
@@ -369,13 +370,13 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
 
             {manyPhases && activityTab === "enviar" ? (
               <label className="flex flex-col gap-2 text-sm font-medium">
-                Escolher fase para enviar
+                Escolher tema para enviar
                 <select
                   className="field-input"
                   value={phasePicker}
                   onChange={(event) => setPhasePicker(event.target.value)}
                 >
-                  <option value="">Selecione uma fase…</option>
+                  <option value="">Selecione um tema…</option>
                   {trackPhases
                     .filter((p) => {
                       const b = classifyMemberPhase(p);
@@ -383,7 +384,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                     })
                     .map((phase) => (
                       <option key={phase.id} value={phase.id}>
-                        Fase {phase.phaseNumber} — {phase.title}
+                        {themeLabel(phase.phaseNumber)} — {phase.title}
                       </option>
                     ))}
                 </select>
@@ -436,7 +437,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
               )}
               {!filteredTrackPhases.length && !(manyPhases && pickerPhase) ? (
                 <p className="text-sm text-muted">
-                  Nenhuma fase neste filtro para o cargo selecionado.
+                  Nenhum tema neste filtro para o cargo selecionado.
                 </p>
               ) : null}
             </div>
@@ -448,7 +449,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
 
       <details className="panel-card">
         <summary className="cursor-pointer text-sm font-semibold">
-          Orientações de todas as fases
+          Orientações de todos os temas
         </summary>
         <div className="mt-4 flex flex-col gap-6">
           {enrollment.tracks.map((track) => (
@@ -458,7 +459,7 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                 {track.phases.map((phase) => (
                   <li key={phase.id}>
                     <p className="font-medium text-foreground">
-                      Fase {phase.phaseNumber}: {phase.title}
+                      {themeLabel(phase.phaseNumber)}: {phase.title}
                     </p>
                           <PhaseDescriptionContent html={phase.description} className="mt-1" />
                   </li>

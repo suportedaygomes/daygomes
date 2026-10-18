@@ -9,6 +9,7 @@ import {
   type CorrectedQueueFilters,
 } from "@/lib/corrector/queue-summaries";
 import { formatCorrectorDateTime } from "@/lib/corrector/submission-row-utils";
+import { themeLabel } from "@/lib/editais/theme-label";
 
 type CorrectedSubmissionsViewProps = {
   submissions: CorrectedSubmissionListRow[];
@@ -239,8 +240,10 @@ export function CorrectedSubmissionsView({
                 {submission.editalTitle}
               </p>
               <p className="text-sm text-muted">
-                {submission.cargoName} · {submission.phaseTitle} · Fase{" "}
-                {submission.phaseNumber ?? "—"}
+                {submission.cargoName} · {submission.phaseTitle}
+                {submission.phaseNumber != null
+                  ? ` · ${themeLabel(submission.phaseNumber)}`
+                  : ""}
               </p>
               <p className="mt-2 text-xs text-muted">
                 Corrigida em {formatCorrectorDateTime(submission.correctedAt)}
