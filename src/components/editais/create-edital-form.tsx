@@ -9,6 +9,7 @@ import { emptyEvaluationRubric } from "@/lib/editais/evaluation-rubric";
 import type { EditalEvaluationRubric } from "@/lib/editais/evaluation-rubric";
 import { DEFAULT_SUBMISSION_PERIOD_DAYS } from "@/lib/editais/member-phase-deadline";
 import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
+import { CorrectionQuotaSelect } from "@/components/editais/correction-quota-select";
 import type { CargoInput, PhaseInput } from "@/lib/editais/types";
 
 type AttachmentDraft = {
@@ -36,6 +37,7 @@ export function CreateEditalForm() {
   const [submissionPeriodDays, setSubmissionPeriodDays] = useState(
     DEFAULT_SUBMISSION_PERIOD_DAYS,
   );
+  const [defaultCorrectionQuota, setDefaultCorrectionQuota] = useState(4);
   const [cargos, setCargos] = useState<CargoInput[]>([emptyCargo()]);
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
   const [draftTitle, setDraftTitle] = useState("");
@@ -59,6 +61,7 @@ export function CreateEditalForm() {
     const result = await createEdital({
       title,
       submissionPeriodDays,
+      defaultCorrectionQuota,
       cargos,
       evaluationRubric,
     });
@@ -157,6 +160,13 @@ export function CreateEditalForm() {
           }))}
         />
       </div>
+
+      <CorrectionQuotaSelect
+        variant="edital-default"
+        value={defaultCorrectionQuota}
+        onChange={setDefaultCorrectionQuota}
+        id="create-edital-default-quota"
+      />
 
       {cargos.map((cargo, cargoIndex) => (
         <section key={cargoIndex} className="panel-card flex flex-col gap-4">

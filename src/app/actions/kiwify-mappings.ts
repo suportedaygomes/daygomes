@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
+import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
 import { createClient } from "@/lib/supabase/server";
 
 export async function saveKiwifyProductMapping(input: {
@@ -34,7 +34,7 @@ export async function saveKiwifyProductMapping(input: {
     return { ok: false, message: "Edital inválido." };
   }
 
-  const correctionQuota = normalizeCorrectionQuota(input.correctionQuota);
+  const correctionQuota = normalizeKiwifyMappingQuota(input.correctionQuota);
 
   const { error } = await supabase.from("kiwify_product_mappings").upsert(
     {

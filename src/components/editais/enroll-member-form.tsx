@@ -4,7 +4,10 @@ import { FormEvent, useMemo, useState } from "react";
 import { enrollMemberInEdital } from "@/app/actions/editais";
 
 type MemberOption = { id: string; full_name: string | null; email: string | null };
-import { MAX_CORRECTION_QUOTA, MIN_CORRECTION_QUOTA } from "@/lib/editais/enrollment-quota";
+import {
+  MAX_CORRECTION_QUOTA,
+  MIN_ADMIN_CORRECTION_QUOTA,
+} from "@/lib/editais/enrollment-quota";
 
 type EnrollMemberFormProps = {
   editalId: string;
@@ -60,7 +63,7 @@ export function EnrollMemberForm({ editalId, members }: EnrollMemberFormProps) {
         Correções incluídas (envios)
         <input
           type="number"
-          min={MIN_CORRECTION_QUOTA}
+          min={MIN_ADMIN_CORRECTION_QUOTA}
           max={MAX_CORRECTION_QUOTA}
           className="field-input max-w-xs"
           value={correctionQuota}
@@ -69,7 +72,8 @@ export function EnrollMemberForm({ editalId, members }: EnrollMemberFormProps) {
         />
       </label>
       <p className="text-xs text-muted">
-        Quantidade de envios que o membro pode fazer nesta mentoria (entre {MIN_CORRECTION_QUOTA} e{" "}
+        Quantidade de envios que o membro pode fazer nesta mentoria (entre{" "}
+        {MIN_ADMIN_CORRECTION_QUOTA} e{" "}
         {MAX_CORRECTION_QUOTA}), em qualquer cargo ou modalidade.
       </p>
       {error ? <p className="alert-error">{error}</p> : null}

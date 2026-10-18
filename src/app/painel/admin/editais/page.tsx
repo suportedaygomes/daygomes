@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { formatEditalDefaultCorrectionQuota } from "@/components/editais/correction-quota-select";
+import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +15,7 @@ export default async function AdminEditaisPage() {
   const supabase = await createClient();
   const { data: editais } = await supabase
     .from("editais")
-    .select("id, title, is_active, created_at")
+    .select("id, title, is_active, created_at, default_correction_quota")
     .order("created_at", { ascending: false });
 
   return (
@@ -38,7 +40,10 @@ export default async function AdminEditaisPage() {
             <p className="font-semibold">{edital.title}</p>
             <p className="mt-1 text-sm text-muted">
               {edital.is_active ? "Ativo" : "Inativo"} ·{" "}
-              {new Date(edital.created_at).toLocaleDateString("pt-BR")}
+              {formatEditalDefaultCorrectionQuota(
+                normalizeCorrectionQuota(edital.default_correction_quota),
+              )}{" "}
+              · {new Date(edital.created_at).toLocaleDateString("pt-BR")}
             </p>
           </Link>
         ))}

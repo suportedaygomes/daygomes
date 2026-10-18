@@ -1,12 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { saveKiwifyProductMapping } from "@/app/actions/kiwify-mappings";
-import { MAX_CORRECTION_QUOTA, MIN_CORRECTION_QUOTA } from "@/lib/editais/enrollment-quota";
+import {
+  CorrectionQuotaSelect,
+  formatEditalDefaultCorrectionQuota,
+} from "@/components/editais/correction-quota-select";
+import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 
 type EditalOption = {
   id: string;
   title: string;
+  defaultCorrectionQuota: number;
 };
 
 type KiwifyMappingFormProps = {
@@ -17,10 +22,19 @@ export function KiwifyMappingForm({ editais }: KiwifyMappingFormProps) {
   const [productId, setProductId] = useState("");
   const [productName, setProductName] = useState("");
   const [editalId, setEditalId] = useState(editais[0]?.id ?? "");
-  const [correctionQuota, setCorrectionQuota] = useState(1);
+  const [correctionQuota, setCorrectionQuota] = useState(
+    editais[0] ? normalizeCorrectionQuota(editais[0].defaultCorrectionQuota) : 4,
+  );
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    const edital = editais.find((item) => item.id === editalId);
+    if (edital) {
+      setCorrectionQuota(normalizeCorrectionQuota(edital.defaultCorrectionQuota));
+    }
+  }, [editalId, editais]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,6 +65,8 @@ export function KiwifyMappingForm({ editais }: KiwifyMappingFormProps) {
       <p className="text-sm text-muted">Cadastre um edital antes de mapear produtos da Kiwify.</p>
     );
   }
+
+  const selectedEdital = editais.find((item) => item.id === editalId);
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -85,22 +101,21 @@ export function KiwifyMappingForm({ editais }: KiwifyMappingFormProps) {
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Correções incluídas no plano
-        <input
-          type="number"
-          min={MIN_CORRECTION_QUOTA}
-          max={MAX_CORRECTION_QUOTA}
-          className="field-input max-w-xs"
-          value={correctionQuota}
-          onChange={(event) => setCorrectionQuota(Number(event.target.value))}
-          required
-        />
-      </label>
-      <p className="text-xs text-muted">
-        O aluno terá acesso a todos os cargos do edital e poderá usar até este número de envios (
-        {MIN_CORRECTION_QUOTA}–{MAX_CORRECTION_QUOTA}).
-      </p>
+      {selectedEdital ? (
+        <p className="text-xs text-muted">
+          Padrão cadastrado nesta mentoria:{" "}
+          <strong className="text-foreground">
+            {formatEditalDefaultCorrectionQuota(selectedEdital.defaultCorrectionQuota)}
+          </strong>
+          . Ajuste abaixo se este produto for pacote avulso (ex.: +4 correções no Zero à Prova).
+        </p>
+      ) : null}
+      <CorrectionQuotaSelect
+        variant="kiwify-product"
+        value={correctionQuota}
+        onChange={setCorrectionQuota}
+        id="kiwify-mapping-quota"
+      />
       {error ? <p className="alert-error">{error}</p> : null}
       {message ? <p className="alert-success">{message}</p> : null}
       <button type="submit" disabled={pending} className="btn-primary w-fit">

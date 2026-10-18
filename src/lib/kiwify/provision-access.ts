@@ -3,7 +3,8 @@ import { sendAccessEmail } from "@/lib/email/send-access-email";
 import { resolveOrCreateMemberProfile } from "@/lib/kiwify/resolve-member-profile";
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
-import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
+import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
+import { mergeKiwifyEnrollmentQuota } from "@/lib/kiwify/merge-enrollment-quota";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProvisionResult =
@@ -94,7 +95,7 @@ export async function provisionKiwifyOrder(
 
   let enrollmentId: string | null = null;
 
-  const correctionQuota = normalizeCorrectionQuota(mapping.correction_quota);
+  const purchasedQuota = normalizeKiwifyMappingQuota(mapping.correction_quota);
 
   const { data: existingEnrollment } = await admin
     .from("member_edital_enrollments")
@@ -103,12 +104,17 @@ export async function provisionKiwifyOrder(
     .eq("edital_id", mapping.edital_id)
     .maybeSingle();
 
+  const mergedQuota = mergeKiwifyEnrollmentQuota(
+    existingEnrollment?.correction_quota,
+    purchasedQuota,
+  );
+
   if (existingEnrollment) {
     enrollmentId = existingEnrollment.id;
     await admin
       .from("member_edital_enrollments")
       .update({
-        correction_quota: Math.max(existingEnrollment.correction_quota ?? 1, correctionQuota),
+        correction_quota: mergedQuota,
         cargo_id: null,
       })
       .eq("id", existingEnrollment.id);
@@ -119,7 +125,7 @@ export async function provisionKiwifyOrder(
         member_id: profileId,
         edital_id: mapping.edital_id,
         cargo_id: null,
-        correction_quota: correctionQuota,
+        correction_quota: mergedQuota,
       })
       .select("id")
       .single();

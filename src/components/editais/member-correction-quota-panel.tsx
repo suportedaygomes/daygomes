@@ -17,11 +17,43 @@ export function MemberCorrectionQuotaPanel({
       : 0;
 
   const remainingTone =
-    correctionsRemaining <= 0
+    correctionQuota === 0
       ? "text-amber-200"
-      : correctionsRemaining === 1
-        ? "text-beige"
-        : "text-emerald-200";
+      : correctionsRemaining <= 0
+        ? "text-amber-200"
+        : correctionsRemaining === 1
+          ? "text-beige"
+          : "text-emerald-200";
+
+  if (correctionQuota === 0) {
+    const zeroBox = (
+      <div
+        className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-5 sm:p-6"
+        aria-label="Correções na mentoria"
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">
+          Correções do plano
+        </p>
+        <p className="mt-2 text-lg font-semibold text-foreground">
+          Sua mentoria inclui o conteúdo e as fases, mas{" "}
+          <strong className="text-amber-100">nenhuma correção</strong> no momento.
+        </p>
+        <p className="mt-2 text-sm text-muted">
+          Para enviar redações para correção, adquira um pacote de 1 a 4 correções na Kiwify
+          (produto vinculado a esta mentoria).
+        </p>
+      </div>
+    );
+    if (compact) {
+      return (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-muted">
+          <strong className="text-foreground">0 correções</strong> — compre um pacote na Kiwify
+          para enviar atividades.
+        </div>
+      );
+    }
+    return zeroBox;
+  }
 
   if (compact) {
     return (

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { updateEdital } from "@/app/actions/editais";
 import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
+import { CorrectionQuotaSelect } from "@/components/editais/correction-quota-select";
 import { SubmissionPeriodPerCargoHints } from "@/components/editais/submission-period-per-cargo-hints";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
 import type { CargoEditInput, PhaseEditInput } from "@/lib/editais/types";
@@ -24,6 +25,7 @@ type Props = {
   editalId: string;
   initialTitle: string;
   initialSubmissionPeriodDays: number;
+  initialDefaultCorrectionQuota: number;
   initialCargos: InitialCargo[];
 };
 
@@ -75,10 +77,14 @@ export function EditEditalForm({
   editalId,
   initialTitle,
   initialSubmissionPeriodDays,
+  initialDefaultCorrectionQuota,
   initialCargos,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [submissionPeriodDays, setSubmissionPeriodDays] = useState(initialSubmissionPeriodDays);
+  const [defaultCorrectionQuota, setDefaultCorrectionQuota] = useState(
+    initialDefaultCorrectionQuota,
+  );
   const [cargos, setCargos] = useState<CargoEditInput[]>(() => mapInitialCargos(initialCargos));
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -98,6 +104,7 @@ export function EditEditalForm({
         editalId,
         title,
         submissionPeriodDays,
+        defaultCorrectionQuota,
         cargos,
       });
       if (!result.ok) {
@@ -160,6 +167,13 @@ export function EditEditalForm({
           }))}
         />
       </div>
+
+      <CorrectionQuotaSelect
+        variant="edital-default"
+        value={defaultCorrectionQuota}
+        onChange={setDefaultCorrectionQuota}
+        id="edit-edital-default-quota"
+      />
 
       {cargos.map((cargo, cargoIndex) => (
         <section

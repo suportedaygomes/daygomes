@@ -31,12 +31,14 @@ export type UpdateEditalInput = {
   editalId: string;
   title: string;
   submissionPeriodDays: number;
+  defaultCorrectionQuota: number;
   cargos: CargoEditInput[];
 };
 
 export type CreateEditalInput = {
   title: string;
   submissionPeriodDays: number;
+  defaultCorrectionQuota: number;
   cargos: CargoInput[];
   evaluationRubric?: EditalEvaluationRubric | null;
 };

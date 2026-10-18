@@ -11,7 +11,10 @@ import {
   validateCreateCargo,
   validateEditCargo,
 } from "@/lib/editais/cargo-phases";
-import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
+import {
+  normalizeAdminEnrollmentQuota,
+  normalizeKiwifyMappingQuota,
+} from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
 import { sanitizePhaseDescriptionHtml } from "@/lib/rich-text/phase-description";
@@ -113,6 +116,7 @@ export async function createEdital(input: CreateEditalInput) {
   }
 
   const submissionPeriodDays = normalizeSubmissionPeriodDays(input.submissionPeriodDays);
+  const defaultCorrectionQuota = normalizeKiwifyMappingQuota(input.defaultCorrectionQuota);
 
   const supabase = await createClient();
 
@@ -121,6 +125,7 @@ export async function createEdital(input: CreateEditalInput) {
     .insert({
       title,
       submission_period_days: submissionPeriodDays,
+      default_correction_quota: defaultCorrectionQuota,
       evaluation_rubric: rubricResult.value,
       updated_at: new Date().toISOString(),
     })
@@ -199,7 +204,7 @@ export async function enrollMemberInEdital(input: {
     return { ok: false, message: "Edital não encontrado." };
   }
 
-  const correctionQuota = normalizeCorrectionQuota(input.correctionQuota);
+  const correctionQuota = normalizeAdminEnrollmentQuota(input.correctionQuota);
 
   const { error } = await admin.from("member_edital_enrollments").upsert(
     {
@@ -284,12 +289,14 @@ export async function updateEdital(input: UpdateEditalInput) {
   }
 
   const submissionPeriodDays = normalizeSubmissionPeriodDays(input.submissionPeriodDays);
+  const defaultCorrectionQuota = normalizeKiwifyMappingQuota(input.defaultCorrectionQuota);
 
   const { error: titleError } = await supabase
     .from("editais")
     .update({
       title,
       submission_period_days: submissionPeriodDays,
+      default_correction_quota: defaultCorrectionQuota,
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.editalId);

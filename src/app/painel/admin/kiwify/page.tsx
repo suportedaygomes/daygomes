@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { KiwifyMappingForm } from "@/components/painel/kiwify-mapping-form";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,13 @@ export default async function AdminKiwifyPage() {
 
   const { data: editais } = await supabase
     .from("editais")
-    .select("id, title")
+    .select("id, title, default_correction_quota")
     .order("created_at", { ascending: false });
 
   const editalOptions = (editais ?? []).map((edital) => ({
     id: edital.id,
     title: edital.title,
+    defaultCorrectionQuota: normalizeCorrectionQuota(edital.default_correction_quota),
   }));
 
   const { data: mappings } = await supabase
@@ -85,7 +87,10 @@ export default async function AdminKiwifyPage() {
                 <li key={row.kiwify_product_id} className="rounded-xl border border-white/8 p-3">
                   <p className="font-medium">{row.kiwify_product_name ?? row.kiwify_product_id}</p>
                   <p className="text-muted">
-                    {edital?.title ?? "—"} · {row.correction_quota} correção(ões)
+                    {edital?.title ?? "—"} ·{" "}
+                    {row.correction_quota === 0
+                      ? "só acesso (0 correções)"
+                      : `${row.correction_quota} correção(ões)`}
                   </p>
                 </li>
               );
