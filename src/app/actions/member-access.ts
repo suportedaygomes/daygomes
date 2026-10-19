@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
+import {
+  getBulkMemberAccessEmailStatus,
+  runBulkMemberAccessEmailSend,
+} from "@/lib/admin/bulk-member-access-email";
 import { resendMemberAccessWithNewPassword } from "@/lib/admin/resend-member-access";
 
 export async function resendMemberAccessEmail(memberId: string) {
@@ -23,4 +27,29 @@ export async function resendMemberAccessEmail(memberId: string) {
   revalidatePath(`/painel/membros/${id}`);
   revalidatePath("/painel/membros");
   return { ok: true, message: result.message };
+}
+
+export async function fetchBulkMemberAccessEmailStatus() {
+  const { profile } = await getCurrentProfile();
+  if (!profile || profile.role !== "admin" || profile.banned) {
+    return { ok: false, message: "Acesso negado." };
+  }
+
+  const status = await getBulkMemberAccessEmailStatus();
+  return { ok: true, status };
+}
+
+export async function sendBulkMemberAccessEmails() {
+  const { profile } = await getCurrentProfile();
+  if (!profile || profile.role !== "admin" || profile.banned) {
+    return { ok: false, message: "Acesso negado." };
+  }
+
+  const result = await runBulkMemberAccessEmailSend();
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+
+  revalidatePath("/painel/membros");
+  return { ok: true, result };
 }

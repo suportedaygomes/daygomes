@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { BulkMemberAccessEmailPanel } from "@/components/painel/bulk-member-access-email-panel";
 import { StaffMembersDirectoryView } from "@/components/painel/staff-members-directory-view";
+import { getBulkMemberAccessEmailStatus } from "@/lib/admin/bulk-member-access-email";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { listStaffMemberDirectory } from "@/lib/members/staff-member-directory";
@@ -14,6 +16,8 @@ export default async function StaffMembrosPage() {
   }
 
   const members = await listStaffMemberDirectory(profile);
+  const bulkStatus =
+    profile.role === "admin" ? await getBulkMemberAccessEmailStatus() : null;
 
   return (
     <PainelPage gap="lg">
@@ -23,6 +27,8 @@ export default async function StaffMembrosPage() {
           Todos os alunos com acesso à plataforma. Contato, editais vinculados e envio de atividades.
         </p>
       </div>
+
+      {bulkStatus ? <BulkMemberAccessEmailPanel initialStatus={bulkStatus} /> : null}
 
       <StaffMembersDirectoryView members={members} />
     </PainelPage>
