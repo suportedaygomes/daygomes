@@ -7,6 +7,7 @@ import {
   reprocessKiwifyOrder,
   resendKiwifyAccessEmail,
 } from "@/app/actions/kiwify-mappings";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export type KiwifyOrderListItem = {
   orderId: string;
@@ -30,6 +31,7 @@ export function KiwifyOrdersPanel({ orders, unlinkedCount }: KiwifyOrdersPanelPr
   const [bulkPending, setBulkPending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [reprocessAllOpen, setReprocessAllOpen] = useState(false);
 
   async function runAction(
     orderId: string,
@@ -51,14 +53,8 @@ export function KiwifyOrdersPanel({ orders, unlinkedCount }: KiwifyOrdersPanelPr
     router.refresh();
   }
 
-  async function onReprocessAll() {
-    if (
-      !window.confirm(
-        `Reprocessar até 30 pedidos sem vínculo (${unlinkedCount} na fila recente)? Confirme que os product_id já estão mapeados.`,
-      )
-    ) {
-      return;
-    }
+  async function onConfirmReprocessAll() {
+    setReprocessAllOpen(false);
     setError("");
     setMessage("");
     setBulkPending(true);
@@ -84,7 +80,7 @@ export function KiwifyOrdersPanel({ orders, unlinkedCount }: KiwifyOrdersPanelPr
             type="button"
             className="btn-primary btn-sm"
             disabled={bulkPending}
-            onClick={onReprocessAll}
+            onClick={() => setReprocessAllOpen(true)}
           >
             {bulkPending ? "Reprocessando..." : "Reprocessar todos sem vínculo"}
           </button>
@@ -144,6 +140,22 @@ export function KiwifyOrdersPanel({ orders, unlinkedCount }: KiwifyOrdersPanelPr
         ))}
         {!orders.length ? <li className="text-muted">Nenhum pedido ainda.</li> : null}
       </ul>
+
+      <ConfirmDialog
+        open={reprocessAllOpen}
+        title="Reprocessar pedidos sem vínculo?"
+        description={
+          <>
+            Serão reprocessados até 30 pedidos da fila recente ({unlinkedCount} sem vínculo). Confirme
+            que os <span className="font-mono text-xs">product_id</span> já estão mapeados antes de
+            continuar.
+          </>
+        }
+        confirmLabel="Reprocessar"
+        pending={bulkPending}
+        onConfirm={onConfirmReprocessAll}
+        onCancel={() => setReprocessAllOpen(false)}
+      />
     </div>
   );
 }

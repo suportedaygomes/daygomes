@@ -2,17 +2,30 @@
 
 Templates em HTML para colar no **Supabase Dashboard** → **Authentication** → **Email Templates**.
 
-## Antes de colar
+## Logo nos e-mails (logo nova + fundo branco)
 
-1. Confirme que a logo do login está em produção: `https://daygomes.com.br/logoday.png` (`public/logoday.png`).
-   Os e-mails usam o mesmo arquivo em 336px de largura sobre fundo `#07070a`. Se usar outro domínio, troque a URL em todos os `.html` e em `transactional-layout.ts`.
-2. Em **Authentication** → **URL Configuration**, defina **Site URL** (ex.: `https://daygomes.com.br`) e inclua em **Redirect URLs**:
+1. Coloque a arte mestre em `public/logonova.PNG` (a mesma do login).
+2. Gere os PNGs:
+
+```bash
+node scripts/strip-logonova-background.mjs
+node scripts/prepare-email-logo.mjs
+```
+
+Isso cria `public/logonova-email.png` (fundo branco, sem cortes na foto/texto).
+
+3. Faça **deploy** do site e confira no navegador:
+   - `https://daygomes.com.br/logonova-email.png`
+4. Os e-mails da **plataforma (Resend)** — senha na compra, reenvio admin, etc. — usam `src/lib/email/transactional-layout.ts` (mesma URL após o deploy).
+5. Os e-mails de **recuperação de senha** vêm do **Supabase**: copie o HTML atualizado de cada arquivo abaixo para o painel (o Supabase **não** lê esta pasta automaticamente).
+
+## Antes de colar no Supabase
+
+1. Em **Authentication** → **URL Configuration**, defina **Site URL** (ex.: `https://daygomes.com.br`) e inclua em **Redirect URLs**:
    - `https://daygomes.com.br/login/atualizar-senha`
    - `http://localhost:3000/login/atualizar-senha` (desenvolvimento)
 
 ## Variáveis do Supabase
-
-Os arquivos usam as variáveis padrão do Go template do Auth:
 
 | Template no painel | Arquivo | Variável principal |
 |--------------------|---------|-------------------|

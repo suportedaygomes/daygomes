@@ -2,10 +2,11 @@ import { escapeHtml } from "@/lib/email/escape-html";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 const DEFAULT_SITE = "https://daygomes.com.br";
-/** Mesmo arquivo do login (`public/logoday.png`, 843×559). Exibido menor para nitidez no mobile. */
-const EMAIL_LOGO_FILE = "logoday.png";
-const EMAIL_LOGO_NATURAL_WIDTH = 843;
-const EMAIL_LOGO_NATURAL_HEIGHT = 559;
+/** Logo para e-mail (`public/logonova-email.png`, gerada por scripts/prepare-email-logo.mjs). */
+const EMAIL_LOGO_FILE = "logonova-email.png";
+/** Dimensões de `logonova-email.png` (após `prepare-email-logo.mjs`). */
+const EMAIL_LOGO_NATURAL_WIDTH = 2024;
+const EMAIL_LOGO_NATURAL_HEIGHT = 825;
 /** Largura de exibição (~22rem do login); a URL serve o PNG em resolução cheia. */
 const EMAIL_LOGO_DISPLAY_WIDTH = 336;
 const EMAIL_LOGO_DISPLAY_HEIGHT = Math.round(
@@ -25,7 +26,14 @@ export function transactionalEmailLogoImg(): string {
   const logoUrl = transactionalLogoUrl();
   const w = EMAIL_LOGO_DISPLAY_WIDTH;
   const h = EMAIL_LOGO_DISPLAY_HEIGHT;
-  return `<img src="${escapeHtml(logoUrl)}" width="${w}" height="${h}" alt="${escapeHtml(SITE_DISPLAY_NAME)}" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:${w}px;max-width:100%;height:auto;" />`;
+  const img = `<img src="${escapeHtml(logoUrl)}" width="${w}" height="${h}" alt="${escapeHtml(SITE_DISPLAY_NAME)}" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:${w}px;max-width:100%;height:auto;" />`;
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+    <tr>
+      <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;border-radius:14px;padding:14px 18px;">
+        ${img}
+      </td>
+    </tr>
+  </table>`;
 }
 
 /** Abertura HTML compartilhada (Supabase Auth e layout transacional). */
@@ -104,7 +112,7 @@ type BuildTransactionalEmailInput = {
   footerNote?: string;
 };
 
-/** Layout escuro alinhado ao login (fundo preto + logoday.png). */
+/** Layout escuro do site + logo nova em cartão branco (logonova-email.png). */
 export function buildTransactionalEmail(input: BuildTransactionalEmailInput): string {
   const button = input.button
     ? transactionalPrimaryButton(input.button.href, input.button.label)

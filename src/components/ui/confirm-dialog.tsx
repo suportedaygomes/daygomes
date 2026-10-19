@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 type ConfirmDialogProps = {
   open: boolean;
   title: string;
-  description: string;
+  description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   pending?: boolean;
+  /** Destaque vermelho no botão de confirmação (ex.: exclusões). */
+  danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -20,6 +22,7 @@ export function ConfirmDialog({
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
   pending = false,
+  danger = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -76,9 +79,9 @@ export function ConfirmDialog({
         <p id={titleId} className="text-lg font-semibold tracking-tight">
           {title}
         </p>
-        <p id={descriptionId} className="mt-2 text-sm leading-6 text-muted">
+        <div id={descriptionId} className="mt-2 text-sm leading-6 text-muted">
           {description}
-        </p>
+        </div>
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button
             type="button"
@@ -91,7 +94,11 @@ export function ConfirmDialog({
           <button
             ref={confirmRef}
             type="button"
-            className="btn-primary btn-sm"
+            className={
+              danger
+                ? "btn-primary btn-sm border border-red-500/40 bg-red-600 hover:bg-red-500"
+                : "btn-primary btn-sm"
+            }
             disabled={pending}
             onClick={onConfirm}
           >

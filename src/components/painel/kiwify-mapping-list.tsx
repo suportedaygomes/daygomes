@@ -10,6 +10,7 @@ import {
   CorrectionQuotaSelect,
   formatEditalDefaultCorrectionQuota,
 } from "@/components/editais/correction-quota-select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 
 type EditalOption = {
@@ -39,6 +40,7 @@ export function KiwifyMappingList({ mappings, editais }: KiwifyMappingListProps)
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const editing = mappings.find((row) => row.kiwify_product_id === editingId);
 
@@ -48,10 +50,10 @@ export function KiwifyMappingList({ mappings, editais }: KiwifyMappingListProps)
     }
   }, [editing]);
 
-  async function onDelete(kiwifyProductId: string) {
-    if (!window.confirm("Excluir este mapeamento? Novas compras desse produto não liberarão acesso.")) {
-      return;
-    }
+  async function onConfirmDelete() {
+    if (!deleteTargetId) return;
+    const kiwifyProductId = deleteTargetId;
+    setDeleteTargetId(null);
     setError("");
     setMessage("");
     setPendingId(kiwifyProductId);
@@ -131,7 +133,7 @@ export function KiwifyMappingList({ mappings, editais }: KiwifyMappingListProps)
                   type="button"
                   className="btn-secondary btn-sm text-red-200"
                   disabled={pendingId === row.kiwify_product_id}
-                  onClick={() => onDelete(row.kiwify_product_id)}
+                  onClick={() => setDeleteTargetId(row.kiwify_product_id)}
                 >
                   Excluir
                 </button>
@@ -201,6 +203,17 @@ export function KiwifyMappingList({ mappings, editais }: KiwifyMappingListProps)
           </div>
         </form>
       ) : null}
+
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        title="Excluir mapeamento?"
+        description="Novas compras desse produto não liberarão acesso automaticamente."
+        confirmLabel="Excluir"
+        danger
+        pending={deleteTargetId !== null && pendingId === deleteTargetId}
+        onConfirm={onConfirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { resendMemberAccessEmail } from "@/app/actions/member-access";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type ResendMemberAccessButtonProps = {
   memberId: string;
@@ -15,20 +16,20 @@ export function ResendMemberAccessButton({
 }: ResendMemberAccessButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function onClick() {
+  function onRequest() {
     if (!memberEmail?.trim()) {
       setError("Este membro não tem e-mail cadastrado.");
       return;
     }
+    setConfirmOpen(true);
+  }
 
-    const confirmed = window.confirm(
-      `Gerar uma nova senha aleatória e enviar por e-mail para ${memberEmail}?\n\nA senha anterior deixa de valer.`,
-    );
-    if (!confirmed) return;
-
+  async function onConfirm() {
+    setConfirmOpen(false);
     setPending(true);
     setError("");
     setMessage("");
@@ -51,7 +52,7 @@ export function ResendMemberAccessButton({
         type="button"
         className="btn-primary btn-sm w-fit"
         disabled={pending || !memberEmail?.trim()}
-        onClick={onClick}
+        onClick={onRequest}
       >
         {pending ? "Enviando..." : "Reenviar acesso com nova senha"}
       </button>
@@ -60,6 +61,22 @@ export function ResendMemberAccessButton({
       </p>
       {error ? <p className="alert-error text-sm">{error}</p> : null}
       {message ? <p className="alert-success text-sm">{message}</p> : null}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Reenviar acesso com nova senha?"
+        description={
+          <>
+            Será gerada uma senha aleatória nova e enviada para{" "}
+            <strong className="text-foreground">{memberEmail}</strong>. A senha anterior deixa de
+            valer.
+          </>
+        }
+        confirmLabel="Enviar e-mail"
+        pending={pending}
+        onConfirm={onConfirm}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

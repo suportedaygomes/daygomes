@@ -65,7 +65,7 @@ export async function listEligibleBulkMemberAccessIds(): Promise<string[]> {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, email")
+    .select("id, email, full_name")
     .eq("role", "membro")
     .eq("banned", false);
 
@@ -98,6 +98,189 @@ export async function listEligibleBulkMemberAccessIds(): Promise<string[]> {
       return true;
     })
     .map((profile) => profile.id);
+}
+
+export type BulkMemberAccessTarget = {
+  id: string;
+  fullName: string;
+  email: string;
+};
+
+export async function listEligibleBulkMemberAccessTargets(): Promise<BulkMemberAccessTarget[]> {
+  const admin = createAdminClient();
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, email, full_name")
+    .eq("role", "membro")
+    .eq("banned", false);
+
+  if (!profiles?.length) return [];
+
+  const { data: enrollments } = await admin
+    .from("member_edital_enrollments")
+    .select("member_id");
+
+  const enrolledIds = new Set((enrollments ?? []).map((row) => row.member_id));
+
+  const { data: sentRows } = await admin
+    .from("kiwify_access_emails")
+    .select("profile_id")
+    .eq("status", "sent")
+    .not("profile_id", "is", null);
+
+  const hasSentEmail = new Set(
+    (sentRows ?? []).map((row) => row.profile_id).filter(Boolean) as string[],
+  );
+
+  const signedIn = await buildLastSignInMap(admin);
+
+  return profiles
+    .filter((profile) => {
+      if (!profile.email?.trim()) return false;
+      if (!enrolledIds.has(profile.id)) return false;
+      if (hasSentEmail.has(profile.id)) return false;
+      if (signedIn.get(profile.id)) return false;
+      return true;
+    })
+    .map((profile) => ({
+      id: profile.id,
+      fullName: profile.full_name?.trim() || "Aluno",
+      email: profile.email!.trim(),
+    }));
+}
+
+export type BulkMemberAccessBatchPlan =
+  | {
+      ok: true;
+      targets: BulkMemberAccessTarget[];
+      skippedByLimit: number;
+    }
+  | { ok: false; message: string };
+
+export async function planBulkMemberAccessBatch(): Promise<BulkMemberAccessBatchPlan> {
+  if (!process.env.RESEND_API_KEY?.trim()) {
+    return { ok: false, message: "RESEND_API_KEY não configurada no servidor." };
+  }
+
+  const admin = createAdminClient();
+  const dayLabel = todayInSaoPaulo();
+  const sentToday = await getBulkSentToday(admin, dayLabel);
+  const remainingToday = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+
+  if (remainingToday <= 0) {
+    return {
+      ok: false,
+      message: `Limite diário atingido (${BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT} envios em massa hoje). Tente amanhã.`,
+    };
+  }
+
+  const eligible = await listEligibleBulkMemberAccessTargets();
+  const targets = eligible.slice(0, remainingToday);
+
+  if (!targets.length) {
+    return {
+      ok: false,
+      message: "Nenhum membro elegível (já receberam e-mail, já entraram na plataforma ou sem inscrição).",
+    };
+  }
+
+  return {
+    ok: true,
+    targets,
+    skippedByLimit: Math.max(0, eligible.length - targets.length),
+  };
+}
+
+async function isMemberStillEligibleForBulk(
+  admin: ReturnType<typeof createAdminClient>,
+  memberId: string,
+): Promise<boolean> {
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, email, role, banned")
+    .eq("id", memberId)
+    .maybeSingle();
+
+  if (!profile || profile.role !== "membro" || profile.banned || !profile.email?.trim()) {
+    return false;
+  }
+
+  const { data: enrollmentRows } = await admin
+    .from("member_edital_enrollments")
+    .select("member_id")
+    .eq("member_id", memberId)
+    .limit(1);
+
+  if (!enrollmentRows?.length) return false;
+
+  const { data: sentRow } = await admin
+    .from("kiwify_access_emails")
+    .select("id")
+    .eq("profile_id", memberId)
+    .eq("status", "sent")
+    .limit(1)
+    .maybeSingle();
+
+  if (sentRow) return false;
+
+  const { data: authUser } = await admin.auth.admin.getUserById(memberId);
+  if (authUser.user?.last_sign_in_at) return false;
+
+  return true;
+}
+
+export type BulkMemberAccessStepResult =
+  | { ok: true; fullName: string; email: string; sentToday: number; remainingToday: number }
+  | { ok: false; message: string };
+
+export async function sendOneBulkMemberAccessEmail(memberId: string): Promise<BulkMemberAccessStepResult> {
+  if (!process.env.RESEND_API_KEY?.trim()) {
+    return { ok: false, message: "RESEND_API_KEY não configurada no servidor." };
+  }
+
+  const admin = createAdminClient();
+  const dayLabel = todayInSaoPaulo();
+  const sentToday = await getBulkSentToday(admin, dayLabel);
+  const remainingToday = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+
+  if (remainingToday <= 0) {
+    return {
+      ok: false,
+      message: `Limite diário de envios em massa atingido (${BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT}/dia).`,
+    };
+  }
+
+  const id = memberId.trim();
+  if (!id) {
+    return { ok: false, message: "Membro inválido." };
+  }
+
+  if (!(await isMemberStillEligibleForBulk(admin, id))) {
+    return { ok: false, message: "Membro não é mais elegível para este lote." };
+  }
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", id)
+    .maybeSingle();
+
+  const result = await resendMemberAccessWithNewPassword(id);
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+
+  await addBulkSentToday(admin, dayLabel, 1);
+  const sentTodayAfter = await getBulkSentToday(admin, dayLabel);
+
+  return {
+    ok: true,
+    fullName: profile?.full_name?.trim() || "Aluno",
+    email: profile?.email?.trim() || "",
+    sentToday: sentTodayAfter,
+    remainingToday: Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentTodayAfter),
+  };
 }
 
 export type BulkMemberAccessEmailStatus = {
@@ -140,60 +323,40 @@ export type BulkMemberAccessEmailRunResult =
     }
   | { ok: false; message: string };
 
+/** Envio em uma única requisição (legado); a UI usa envio passo a passo para evitar timeout. */
 export async function runBulkMemberAccessEmailSend(): Promise<BulkMemberAccessEmailRunResult> {
-  if (!process.env.RESEND_API_KEY?.trim()) {
-    return { ok: false, message: "RESEND_API_KEY não configurada no servidor." };
-  }
-
-  const admin = createAdminClient();
-  const dayLabel = todayInSaoPaulo();
-  const sentToday = await getBulkSentToday(admin, dayLabel);
-  const remainingToday = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
-
-  if (remainingToday <= 0) {
-    return {
-      ok: false,
-      message: `Limite diário atingido (${BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT} envios em massa hoje). Tente amanhã.`,
-    };
-  }
-
-  const eligible = await listEligibleBulkMemberAccessIds();
-  const batch = eligible.slice(0, remainingToday);
-
-  if (!batch.length) {
-    return {
-      ok: false,
-      message: "Nenhum membro elegível (já receberam e-mail, já entraram na plataforma ou sem inscrição).",
-    };
+  const plan = await planBulkMemberAccessBatch();
+  if (!plan.ok) {
+    return { ok: false, message: plan.message };
   }
 
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
 
-  for (const memberId of batch) {
-    const result = await resendMemberAccessWithNewPassword(memberId);
+  for (const target of plan.targets) {
+    const result = await sendOneBulkMemberAccessEmail(target.id);
     if (result.ok) {
       sent += 1;
     } else {
       failed += 1;
       if (errors.length < 10) {
-        errors.push(result.message);
+        errors.push(`${target.fullName}: ${result.message}`);
       }
     }
     await sleep(200);
   }
 
-  await addBulkSentToday(admin, dayLabel, sent);
-
-  const eligibleAfter = await listEligibleBulkMemberAccessIds();
+  const admin = createAdminClient();
+  const dayLabel = todayInSaoPaulo();
   const sentTodayAfter = await getBulkSentToday(admin, dayLabel);
+  const eligibleAfter = await listEligibleBulkMemberAccessIds();
 
   return {
     ok: true,
     sent,
     failed,
-    skippedLimit: Math.max(0, eligible.length - batch.length),
+    skippedLimit: plan.skippedByLimit,
     sentToday: sentTodayAfter,
     remainingToday: Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentTodayAfter),
     eligibleRemaining: eligibleAfter.length,

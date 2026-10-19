@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import {
+  type BulkMemberAccessTarget,
   getBulkMemberAccessEmailStatus,
+  planBulkMemberAccessBatch,
   runBulkMemberAccessEmailSend,
+  sendOneBulkMemberAccessEmail,
 } from "@/lib/admin/bulk-member-access-email";
 import { resendMemberAccessWithNewPassword } from "@/lib/admin/resend-member-access";
 
@@ -52,4 +55,43 @@ export async function sendBulkMemberAccessEmails() {
 
   revalidatePath("/painel/membros");
   return { ok: true, result };
+}
+
+export async function fetchBulkMemberAccessBatch(): Promise<
+  | { ok: false; message: string }
+  | { ok: true; targets: BulkMemberAccessTarget[]; skippedByLimit: number }
+> {
+  const { profile } = await getCurrentProfile();
+  if (!profile || profile.role !== "admin" || profile.banned) {
+    return { ok: false, message: "Acesso negado." };
+  }
+
+  const plan = await planBulkMemberAccessBatch();
+  if (!plan.ok) {
+    return { ok: false, message: plan.message };
+  }
+
+  return {
+    ok: true,
+    targets: plan.targets,
+    skippedByLimit: plan.skippedByLimit,
+  };
+}
+
+export async function sendBulkMemberAccessEmailStep(
+  memberId: string,
+): Promise<
+  | { ok: false; message: string }
+  | { ok: true; fullName: string; email: string; sentToday: number; remainingToday: number }
+> {
+  const { profile } = await getCurrentProfile();
+  if (!profile || profile.role !== "admin" || profile.banned) {
+    return { ok: false, message: "Acesso negado." };
+  }
+
+  const result = await sendOneBulkMemberAccessEmail(memberId);
+  if (result.ok) {
+    revalidatePath("/painel/membros");
+  }
+  return result;
 }
