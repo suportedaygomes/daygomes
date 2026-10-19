@@ -48,6 +48,22 @@ function requireAdmin(profile: Awaited<ReturnType<typeof getCurrentProfile>>["pr
   return profile && profile.role === "admin" && !profile.banned;
 }
 
+function enrollmentWriteErrorMessage(error: { code?: string }) {
+  if (error.code === "23505") {
+    return "Este membro já está vinculado a esta mentoria.";
+  }
+  if (error.code === "23514") {
+    return "A quantidade de correções precisa estar entre 1 e 4.";
+  }
+  if (error.code === "23503") {
+    return "Membro ou edital inválido.";
+  }
+  if (error.code === "23502") {
+    return "Não foi possível gravar a inscrição porque falta um campo obrigatório.";
+  }
+  return "Não foi possível vincular o membro.";
+}
+
 function validateCreateCargos(cargos: CreateEditalInput["cargos"]) {
   if (!cargos.length) {
     return { ok: false as const, message: "Adicione pelo menos um cargo." };
@@ -177,52 +193,92 @@ export async function enrollMemberInEdital(input: {
   editalId: string;
   correctionQuota: number;
 }) {
-  const { profile } = await getCurrentProfile();
-  if (!requireAdmin(profile)) {
-    return { ok: false, message: "Acesso negado." };
+  try {
+    const { profile } = await getCurrentProfile();
+    if (!requireAdmin(profile)) {
+      return { ok: false, message: "Acesso negado." };
+    }
+
+    if (!input.memberId || !input.editalId) {
+      return { ok: false, message: "Selecione um membro válido." };
+    }
+
+    const admin = createAdminClient();
+
+    const { data: member, error: memberError } = await admin
+      .from("profiles")
+      .select("id, role")
+      .eq("id", input.memberId)
+      .maybeSingle();
+
+    if (memberError || !member || member.role !== "membro") {
+      return { ok: false, message: "Selecione um membro válido." };
+    }
+
+    const { data: edital, error: editalError } = await admin
+      .from("editais")
+      .select("id")
+      .eq("id", input.editalId)
+      .maybeSingle();
+
+    if (editalError || !edital) {
+      return { ok: false, message: "Edital não encontrado." };
+    }
+
+    const correctionQuota = normalizeAdminEnrollmentQuota(input.correctionQuota);
+
+    const { data: existing, error: existingError } = await admin
+      .from("member_edital_enrollments")
+      .select("id")
+      .eq("member_id", input.memberId)
+      .eq("edital_id", input.editalId)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("[enrollMemberInEdital] lookup failed", existingError.message);
+      return { ok: false, message: "Não foi possível verificar a inscrição." };
+    }
+
+    if (existing) {
+      const { error } = await admin
+        .from("member_edital_enrollments")
+        .update({
+          cargo_id: null,
+          correction_quota: correctionQuota,
+        })
+        .eq("id", existing.id);
+
+      if (error) {
+        console.error("[enrollMemberInEdital] update failed", error.code, error.message);
+        return { ok: false, message: enrollmentWriteErrorMessage(error) };
+      }
+    } else {
+      const { error } = await admin.from("member_edital_enrollments").insert({
+        member_id: input.memberId,
+        edital_id: input.editalId,
+        cargo_id: null,
+        correction_quota: correctionQuota,
+      });
+
+      if (error) {
+        console.error("[enrollMemberInEdital] insert failed", error.code, error.message);
+        return { ok: false, message: enrollmentWriteErrorMessage(error) };
+      }
+    }
+
+    // A página do edital é grande. Revalidar aqui faz o Next anexar o HTML
+    // inteiro na resposta da ação, e essa resposta pode nunca fechar — o
+    // botão fica em "Vinculando...". Quem chamou atualiza a lista com router.refresh().
+    return {
+      ok: true,
+      message: existing
+        ? "Membro já estava na mentoria. A cota de correções foi atualizada."
+        : "Membro vinculado à mentoria.",
+    };
+  } catch (error) {
+    console.error("[enrollMemberInEdital] unexpected", error);
+    return { ok: false, message: "Não foi possível vincular o membro. Tente novamente." };
   }
-
-  const admin = createAdminClient();
-
-  const { data: member } = await admin
-    .from("profiles")
-    .select("id, role")
-    .eq("id", input.memberId)
-    .maybeSingle();
-
-  if (!member || member.role !== "membro") {
-    return { ok: false, message: "Selecione um membro válido." };
-  }
-
-  const { data: edital } = await admin
-    .from("editais")
-    .select("id")
-    .eq("id", input.editalId)
-    .maybeSingle();
-
-  if (!edital) {
-    return { ok: false, message: "Edital não encontrado." };
-  }
-
-  const correctionQuota = normalizeAdminEnrollmentQuota(input.correctionQuota);
-
-  const { error } = await admin.from("member_edital_enrollments").upsert(
-    {
-      member_id: input.memberId,
-      edital_id: input.editalId,
-      cargo_id: null,
-      correction_quota: correctionQuota,
-    },
-    { onConflict: "member_id,edital_id" },
-  );
-
-  if (error) {
-    return { ok: false, message: "Não foi possível vincular o membro." };
-  }
-
-  revalidatePath(`/painel/admin/editais/${input.editalId}`);
-  revalidatePath("/painel/editais");
-  return { ok: true, message: "Membro vinculado à mentoria." };
 }
 
 export async function updateEditalEvaluationRubric(input: {
@@ -253,8 +309,6 @@ export async function updateEditalEvaluationRubric(input: {
     return { ok: false, message: "Não foi possível salvar os quesitos." };
   }
 
-  revalidatePath(`/painel/admin/editais/${input.editalId}`);
-  revalidatePath("/painel/correcoes");
   return { ok: true, message: "Quesitos avaliativos salvos." };
 }
 
@@ -465,12 +519,17 @@ export async function updateEdital(input: UpdateEditalInput) {
     }
   }
 
-  revalidatePath("/painel/admin/editais");
-  revalidatePath(`/painel/admin/editais/${input.editalId}`);
-  revalidatePath("/painel/editais");
   return { ok: true, message: "Edital atualizado com sucesso." };
   } catch (error) {
     console.error("[updateEdital] unexpected error", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (/body exceeded|too large|payload/i.test(detail)) {
+      return {
+        ok: false,
+        message:
+          "O edital é grande demais para enviar de uma vez. Reduza textos longos nos temas ou salve em partes menores.",
+      };
+    }
     return {
       ok: false,
       message: "Erro inesperado ao salvar o edital. Tente novamente em instantes.",

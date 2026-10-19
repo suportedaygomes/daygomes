@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { enrollMemberInEdital } from "@/app/actions/editais";
 
 type MemberOption = { id: string; full_name: string | null; email: string | null };
@@ -15,6 +16,7 @@ type EnrollMemberFormProps = {
 };
 
 export function EnrollMemberForm({ editalId, members }: EnrollMemberFormProps) {
+  const router = useRouter();
   const [memberId, setMemberId] = useState(members[0]?.id ?? "");
   const [correctionQuota, setCorrectionQuota] = useState(4);
   const [error, setError] = useState("");
@@ -36,13 +38,19 @@ export function EnrollMemberForm({ editalId, members }: EnrollMemberFormProps) {
     setMessage("");
     setPending(true);
 
-    const result = await enrollMemberInEdital({ memberId, editalId, correctionQuota });
-    if (!result.ok) {
-      setError(result.message);
-    } else {
+    try {
+      const result = await enrollMemberInEdital({ memberId, editalId, correctionQuota });
+      if (!result?.ok) {
+        setError(result?.message ?? "Não foi possível vincular o membro.");
+        return;
+      }
       setMessage(result.message);
+      router.refresh();
+    } catch {
+      setError("Não foi possível vincular o membro. Atualize a página e tente de novo.");
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }
 
   if (!members.length) {

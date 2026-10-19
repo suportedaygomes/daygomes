@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateEdital } from "@/app/actions/editais";
 import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
 import { CorrectionQuotaSelect } from "@/components/editais/correction-quota-select";
@@ -80,6 +81,7 @@ export function EditEditalForm({
   initialDefaultCorrectionQuota,
   initialCargos,
 }: Props) {
+  const router = useRouter();
   const [title, setTitle] = useState(initialTitle);
   const [submissionPeriodDays, setSubmissionPeriodDays] = useState(initialSubmissionPeriodDays);
   const [defaultCorrectionQuota, setDefaultCorrectionQuota] = useState(
@@ -107,14 +109,15 @@ export function EditEditalForm({
         defaultCorrectionQuota,
         cargos,
       });
-      if (!result.ok) {
-        setError(result.message);
-      } else {
-        setMessage(result.message);
+      if (!result?.ok) {
+        setError(result?.message ?? "Não foi possível salvar o edital.");
+        return;
       }
+      setMessage(result.message);
+      router.refresh();
     } catch {
       setError(
-        "Não foi possível salvar. Se o edital é grande, aguarde um pouco e tente de novo — ou recarregue a página.",
+        "Não foi possível concluir o salvamento. Aguarde alguns segundos e tente de novo; se persistir, recarregue a página.",
       );
     } finally {
       setPending(false);

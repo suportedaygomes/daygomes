@@ -5,7 +5,8 @@ import { baselineSecurityHeaders } from "./src/lib/security/headers";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      // Editais com muitos temas e descrições ricas podem ultrapassar o padrão (1 MB).
+      bodySizeLimit: "25mb",
     },
   },
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],

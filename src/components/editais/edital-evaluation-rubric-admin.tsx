@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateEditalEvaluationRubric } from "@/app/actions/editais";
 import { EvaluationRubricEditor } from "@/components/editais/evaluation-rubric-editor";
 import type { EditalEvaluationRubric } from "@/lib/editais/evaluation-rubric";
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function EditalEvaluationRubricAdmin({ editalId, initialRubric }: Props) {
+  const router = useRouter();
   const [rubric, setRubric] = useState<EditalEvaluationRubric>(
     initialRubric ?? emptyEvaluationRubric(),
   );
@@ -25,13 +27,19 @@ export function EditalEvaluationRubricAdmin({ editalId, initialRubric }: Props) 
     setMessage("");
     setPending(true);
 
-    const result = await updateEditalEvaluationRubric({ editalId, rubric });
-    if (!result.ok) {
-      setError(result.message);
-    } else {
+    try {
+      const result = await updateEditalEvaluationRubric({ editalId, rubric });
+      if (!result?.ok) {
+        setError(result?.message ?? "Não foi possível salvar os quesitos.");
+        return;
+      }
       setMessage(result.message);
+      router.refresh();
+    } catch {
+      setError("Não foi possível salvar os quesitos. Tente novamente em instantes.");
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   }
 
   return (
