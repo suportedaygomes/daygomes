@@ -1,0 +1,14 @@
+{
+  "webhook_event_type": "compra_aprovada",
+  "order_id": "teste-manual-e1f2d170-20261017-novo-user",
+  "order_status": "paid",
+  "Product": {
+    "product_id": "e1f2d170-c828-11f1-91db-0ffb3916b737",
+    "product_name": "Plano Completo - 4 redações"
+  },
+  "Customer": {
+    "email": "daygomes.kiwify.teste.20261017@gmail.com",
+    "full_name": "Teste Kiwify Novo",
+    "CPF": "52998224725"
+  }
+}

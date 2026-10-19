@@ -1,0 +1,14 @@
+{
+  "webhook_event_type": "compra_aprovada",
+  "order_id": "teste-prod-pos-deploy-1",
+  "order_status": "paid",
+  "Product": {
+    "product_id": "e1f2d170-c828-11f1-91db-0ffb3916b737",
+    "product_name": "Plano Completo - 4 redações"
+  },
+  "Customer": {
+    "email": "outro.email.teste@gmail.com",
+    "full_name": "Teste Prod Deploy",
+    "CPF": "39053344705"
+  }
+}

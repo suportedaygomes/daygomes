@@ -18,13 +18,21 @@ export function isStaffRole(role: UserRole) {
 
 async function corretorCanViewMember(memberId: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data: submission } = await supabase
     .from("phase_submissions")
     .select("id")
     .eq("member_id", memberId)
     .limit(1)
     .maybeSingle();
-  return Boolean(data);
+  if (submission) return true;
+
+  const { data: enrollment } = await supabase
+    .from("member_edital_enrollments")
+    .select("id")
+    .eq("member_id", memberId)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(enrollment);
 }
 
 export async function getStaffMemberContact(
