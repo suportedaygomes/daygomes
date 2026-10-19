@@ -2,7 +2,6 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { enrollMemberInEdital } from "@/app/actions/editais";
 
 type MemberOption = { id: string; full_name: string | null; email: string | null };
 import {
@@ -39,15 +38,31 @@ export function EnrollMemberForm({ editalId, members }: EnrollMemberFormProps) {
     setPending(true);
 
     try {
-      const result = await enrollMemberInEdital({ memberId, editalId, correctionQuota });
-      if (!result?.ok) {
-        setError(result?.message ?? "Não foi possível vincular o membro.");
+      const response = await fetch(`/api/admin/editais/${editalId}/enrollments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, correctionQuota }),
+      });
+
+      const result = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        message?: string;
+      } | null;
+
+      if (!response.ok || !result?.ok) {
+        setError(
+          result?.message ??
+            (response.status === 503
+              ? "Vinculação indisponível no servidor. Tente de novo em instantes."
+              : "Não foi possível vincular o membro."),
+        );
         return;
       }
-      setMessage(result.message);
+
+      setMessage(result.message ?? "Membro vinculado à mentoria.");
       router.refresh();
     } catch {
-      setError("Não foi possível vincular o membro. Atualize a página e tente de novo.");
+      setError("Não foi possível vincular o membro. Verifique a conexão e tente de novo.");
     } finally {
       setPending(false);
     }
