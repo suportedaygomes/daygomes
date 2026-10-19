@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ editalId: string }> };
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { editalId } = await context.params;

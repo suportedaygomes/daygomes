@@ -9,7 +9,11 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "25mb",
     },
   },
-  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  serverExternalPackages: [
+    "@sparticuz/chromium",
+    "puppeteer-core",
+    "isomorphic-dompurify",
+  ],
   images: {
     remotePatterns: [
       {

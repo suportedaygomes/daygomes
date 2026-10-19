@@ -1,4 +1,11 @@
 import DOMPurify from "isomorphic-dompurify";
+import {
+  isPhaseDescriptionEmpty,
+  looksLikePhaseDescriptionHtml,
+  phaseDescriptionPlainText,
+} from "@/lib/rich-text/phase-description-plain";
+
+export { isPhaseDescriptionEmpty, looksLikePhaseDescriptionHtml, phaseDescriptionPlainText };
 
 const ALLOWED_TAGS = [
   "p",
@@ -46,26 +53,6 @@ function ensureSanitizeHooks() {
 export function sanitizePhaseDescriptionHtml(html: string): string {
   ensureSanitizeHooks();
   return DOMPurify.sanitize(html, PURIFY_CONFIG);
-}
-
-export function phaseDescriptionPlainText(html: string): string {
-  const stripped = html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
-  return stripped.replace(/\n{3,}/g, "\n\n").trim();
-}
-
-export function isPhaseDescriptionEmpty(html: string): boolean {
-  return phaseDescriptionPlainText(html).length === 0;
-}
-
-export function looksLikePhaseDescriptionHtml(value: string): boolean {
-  return /<[a-z][\s\S]*>/i.test(value);
 }
 
 export function normalizePhaseDescriptionForDisplay(value: string): string {

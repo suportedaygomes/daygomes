@@ -1,6 +1,6 @@
 import type { ActivityKind } from "@/lib/editais/activity-kind";
 import type { CargoEditInput, CargoInput, PhaseInput } from "@/lib/editais/types";
-import { phaseDescriptionPlainText } from "@/lib/rich-text/phase-description";
+import { phaseDescriptionPlainText } from "@/lib/rich-text/phase-description-plain";
 
 export function validateCreateCargo(cargo: CargoInput): { ok: true } | { ok: false; message: string } {
   const cargoName = cargo.name.trim().toUpperCase();

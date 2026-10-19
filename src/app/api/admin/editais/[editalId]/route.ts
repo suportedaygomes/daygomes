@@ -6,6 +6,9 @@ import { updateEditalCore } from "@/lib/editais/update-edital-core";
 
 type RouteContext = { params: Promise<{ editalId: string }> };
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const auth = await verifyAdminApi();

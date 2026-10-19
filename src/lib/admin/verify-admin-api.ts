@@ -4,7 +4,18 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function verifyAdminApi() {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch (error) {
+    console.error("[verifyAdminApi] createClient", error);
+    return {
+      error: NextResponse.json(
+        { ok: false, message: "Configuração do Supabase incompleta no servidor." },
+        { status: 503 },
+      ),
+    };
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
