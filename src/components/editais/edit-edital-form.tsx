@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { updateEdital } from "@/app/actions/editais";
 import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
 import { CorrectionQuotaSelect } from "@/components/editais/correction-quota-select";
 import { SubmissionPeriodPerCargoHints } from "@/components/editais/submission-period-per-cargo-hints";
@@ -102,22 +101,37 @@ export function EditEditalForm({
     setMessage("");
     setPending(true);
     try {
-      const result = await updateEdital({
-        editalId,
-        title,
-        submissionPeriodDays,
-        defaultCorrectionQuota,
-        cargos,
+      const response = await fetch(`/api/admin/editais/${editalId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          submissionPeriodDays,
+          defaultCorrectionQuota,
+          cargos,
+        }),
       });
-      if (!result?.ok) {
-        setError(result?.message ?? "Não foi possível salvar o edital.");
+
+      const result = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        message?: string;
+      } | null;
+
+      if (!response.ok || !result?.ok) {
+        setError(
+          result?.message ??
+            (response.status === 413
+              ? "O edital é grande demais para enviar de uma vez. Reduza textos longos nos temas."
+              : "Não foi possível salvar o edital."),
+        );
         return;
       }
-      setMessage(result.message);
+
+      setMessage(result.message ?? "Edital atualizado com sucesso.");
       router.refresh();
     } catch {
       setError(
-        "Não foi possível concluir o salvamento. Aguarde alguns segundos e tente de novo; se persistir, recarregue a página.",
+        "Não foi possível concluir o salvamento. Verifique a conexão e tente de novo.",
       );
     } finally {
       setPending(false);

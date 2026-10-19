@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { updateEditalEvaluationRubric } from "@/app/actions/editais";
 import { EvaluationRubricEditor } from "@/components/editais/evaluation-rubric-editor";
 import type { EditalEvaluationRubric } from "@/lib/editais/evaluation-rubric";
 import { emptyEvaluationRubric } from "@/lib/editais/evaluation-rubric";
@@ -28,12 +27,21 @@ export function EditalEvaluationRubricAdmin({ editalId, initialRubric }: Props) 
     setPending(true);
 
     try {
-      const result = await updateEditalEvaluationRubric({ editalId, rubric });
-      if (!result?.ok) {
+      const response = await fetch(`/api/admin/editais/${editalId}/evaluation-rubric`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rubric }),
+      });
+
+      const result = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        message?: string;
+      } | null;
+      if (!response.ok || !result?.ok) {
         setError(result?.message ?? "Não foi possível salvar os quesitos.");
         return;
       }
-      setMessage(result.message);
+      setMessage(result.message ?? "Quesitos avaliativos salvos.");
       router.refresh();
     } catch {
       setError("Não foi possível salvar os quesitos. Tente novamente em instantes.");
