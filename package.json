@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import-kiwify-csv": "npx tsx scripts/import-kiwify-sales-csv.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",
