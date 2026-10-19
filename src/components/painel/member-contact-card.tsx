@@ -35,12 +35,14 @@ export function MemberContactCard({
             </p>
           ) : null}
         </div>
-        <Link
-          href={`/painel/membros/${member.id}`}
-          className="text-sm font-medium text-purple hover:underline"
-        >
-          Ver perfil completo
-        </Link>
+        {compact ? (
+          <Link
+            href={`/painel/membros/${member.id}`}
+            className="text-sm font-medium text-purple hover:underline"
+          >
+            Ver ficha do membro
+          </Link>
+        ) : null}
       </div>
 
       <dl className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -71,6 +73,10 @@ export function MemberContactCard({
             <div>
               <dt className="text-muted">Data de nascimento</dt>
               <dd className="font-medium">{formatBirthDate(member.birth_date)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">WhatsApp</dt>
+              <dd className="font-medium">{member.whatsapp?.trim() || "—"}</dd>
             </div>
           </>
         ) : null}

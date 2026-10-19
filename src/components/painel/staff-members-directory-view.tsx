@@ -191,10 +191,12 @@ export function StaffMembersDirectoryView({ members }: StaffMembersDirectoryView
                 </td>
                 <td className="px-3 py-3 text-center tabular-nums">{member.editalCount}</td>
                 <td className="px-3 py-3 text-center tabular-nums">{member.correctionsUsed}</td>
-                <td className="px-3 py-3 text-center tabular-nums">
-                  {member.correctionsRemaining}
-                  {member.correctionsQuota > 0 ? (
-                    <span className="text-xs text-muted"> / {member.correctionsQuota}</span>
+                <td className="px-3 py-3 text-center">
+                  <span className="tabular-nums">
+                    {member.correctionsRemaining} / {member.correctionsQuota}
+                  </span>
+                  {member.correctionsQuota === 0 && member.editalCount > 0 ? (
+                    <p className="mt-0.5 text-xs text-muted">só conteúdo</p>
                   ) : null}
                 </td>
                 <td className="px-3 py-3 text-right">
@@ -221,9 +223,9 @@ export function StaffMembersDirectoryView({ members }: StaffMembersDirectoryView
       {members.length > 0 ? (
         <p className="text-xs text-muted">
           <strong>Entrada:</strong> data de criação da conta na plataforma.{" "}
-          <strong>Correções:</strong> cota do plano por mentoria (0 a 4 no Zero à Prova, até 4 nas
-          demais). Usadas = envios que consumiram cota; disponíveis = o que ainda pode enviar (soma
-          de todas as mentorias).
+          <strong>Correções:</strong> formato <em>disponíveis / cota total</em> (soma de todas as
+          mentorias). <strong>0 / 0</strong> = mentoria só conteúdo, sem envio para correção.{" "}
+          <strong>0 / 4</strong> = já usou as 4 correções do plano.
         </p>
       ) : null}
     </div>

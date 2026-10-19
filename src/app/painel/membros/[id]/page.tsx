@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MemberContactCard } from "@/components/painel/member-contact-card";
+import { StaffMemberEnrollmentsPanel } from "@/components/painel/staff-member-enrollments-panel";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import {
   getStaffMemberContact,
   isStaffRole,
 } from "@/lib/members/staff-member-profile";
+import { listStaffMemberEnrollments } from "@/lib/members/staff-member-enrollments";
 import { createClient } from "@/lib/supabase/server";
 import { themeLabel } from "@/lib/editais/theme-label";
 
@@ -25,6 +27,8 @@ export default async function StaffMembroDetailPage({
   if (!member) {
     redirect("/painel/membros");
   }
+
+  const enrollments = await listStaffMemberEnrollments(id);
 
   const supabase = await createClient();
   const { data: submissions } = await supabase
@@ -46,6 +50,8 @@ export default async function StaffMembroDetailPage({
       </div>
 
       <MemberContactCard member={member} />
+
+      <StaffMemberEnrollmentsPanel enrollments={enrollments} />
 
       <section className="panel-card">
         <h2 className="text-lg font-semibold">Envios recentes</h2>
