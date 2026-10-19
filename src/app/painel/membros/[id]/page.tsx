@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MemberContactCard } from "@/components/painel/member-contact-card";
+import { ResendMemberAccessButton } from "@/components/painel/resend-member-access-button";
 import { StaffMemberEnrollmentsPanel } from "@/components/painel/staff-member-enrollments-panel";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
@@ -50,6 +51,18 @@ export default async function StaffMembroDetailPage({
       </div>
 
       <MemberContactCard member={member} />
+
+      {profile.role === "admin" ? (
+        <section className="panel-card">
+          <h2 className="text-lg font-semibold">Acesso à plataforma</h2>
+          <p className="mt-1 text-sm text-muted">
+            Para alunos que não receberam o e-mail da Kiwify ou do importação CSV.
+          </p>
+          <div className="mt-4">
+            <ResendMemberAccessButton memberId={member.id} memberEmail={member.email} />
+          </div>
+        </section>
+      ) : null}
 
       <StaffMemberEnrollmentsPanel enrollments={enrollments} />
 

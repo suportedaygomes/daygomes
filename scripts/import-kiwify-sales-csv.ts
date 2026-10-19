@@ -262,7 +262,10 @@ async function main() {
 
   let ok = 0;
   let fail = 0;
+  let emailsSent = 0;
+  let emailsFailed = 0;
   const errors: string[] = [];
+  const emailErrors: string[] = [];
 
   for (const { row, mapping } of limited) {
     await clearUnlinkedOrderEvent(admin, row.orderId);
@@ -283,17 +286,40 @@ async function main() {
     }
 
     ok += 1;
+    if (result.emailSent) {
+      emailsSent += 1;
+    } else {
+      emailsFailed += 1;
+      if (emailErrors.length < 15) {
+        emailErrors.push(
+          `${row.email}: ${result.reason ?? "e-mail não enviado"}`,
+        );
+      }
+    }
+
     if (ok % 25 === 0) {
-      console.log(`  … ${ok} provisionados`);
+      console.log(`  … ${ok} provisionados (${emailsSent} e-mails ok)`);
     }
 
     await sleep(150);
   }
 
+  if (!process.env.RESEND_API_KEY?.trim()) {
+    console.warn(
+      "\n⚠ RESEND_API_KEY não configurada — nenhum e-mail de acesso foi enviado.",
+    );
+  }
+
   console.log("\n--- Resultado ---");
   console.log(`Provisionados com sucesso: ${ok}`);
-  console.log(`Falhas: ${fail}`);
+  console.log(`E-mails enviados: ${emailsSent}`);
+  console.log(`E-mails com falha: ${emailsFailed}`);
+  console.log(`Falhas de provisionamento: ${fail}`);
   console.log(`Ignorados (já existiam): ${skippedAlreadyCount}`);
+  if (emailErrors.length) {
+    console.log("\nPrimeiras falhas de e-mail:");
+    for (const line of emailErrors) console.log(`  ${line}`);
+  }
   if (errors.length) {
     console.log("\nPrimeiras falhas:");
     for (const line of errors) console.log(`  ${line}`);
