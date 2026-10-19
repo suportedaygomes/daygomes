@@ -5,7 +5,7 @@ import { validateEditCargo } from "@/lib/editais/cargo-phases";
 import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
 import type { CargoEditInput, UpdateEditalInput } from "@/lib/editais/types";
-import { sanitizePhaseDescriptionHtml } from "@/lib/rich-text/phase-description";
+import { sanitizePhaseDescriptionHtmlServer } from "@/lib/rich-text/sanitize-phase-description-server";
 import type { createAdminClient } from "@/lib/supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -23,20 +23,31 @@ function validateEditCargos(cargos: CargoEditInput[]) {
   return { ok: true as const };
 }
 
-function safeSanitizeDescription(raw: string) {
-  const trimmed = raw.trim();
-  try {
-    return sanitizePhaseDescriptionHtml(trimmed);
-  } catch (error) {
-    console.error("[updateEdital] sanitize failed", error);
-    return trimmed;
+const PHASE_NUMBER_RENUMBER_OFFSET = 10_000;
+
+function mapDbErrorMessage(context: string, error: { code?: string; message?: string }) {
+  console.error(`[updateEdital] ${context}`, error.code, error.message);
+  if (error.code === "23505") {
+    return "Conflito ao salvar os temas (número duplicado). Tente salvar de novo.";
   }
+  if (error.code === "42703" || error.code === "PGRST204") {
+    return "Banco desatualizado: falta uma coluna esperada. Rode as migrations do Supabase.";
+  }
+  if (error.message) {
+    return `Não foi possível salvar (${context}): ${error.message}`;
+  }
+  return "Não foi possível salvar o edital.";
+}
+
+function safeSanitizeDescription(raw: string) {
+  return sanitizePhaseDescriptionHtmlServer(raw);
 }
 
 export async function updateEditalCore(
   admin: AdminClient,
   input: UpdateEditalInput,
 ): Promise<UpdateEditalResult> {
+  try {
   const title = input.title.trim();
   if (title.length < 3) {
     return { ok: false, message: "Informe o título do edital." };
@@ -71,7 +82,7 @@ export async function updateEditalCore(
     .eq("id", input.editalId);
 
   if (titleError) {
-    return { ok: false, message: "Não foi possível atualizar o título." };
+    return { ok: false, message: mapDbErrorMessage("edital", titleError) };
   }
 
   const { data: existingCargos } = await admin
@@ -192,6 +203,25 @@ export async function updateEditalCore(
     }
 
     for (const [activityKind, kindPhases] of phasesByKind) {
+      const existingIds = kindPhases
+        .map((phase) => phase.id)
+        .filter((id): id is string => Boolean(id));
+
+      for (const [tempIndex, phaseId] of existingIds.entries()) {
+        const { error: tempError } = await admin
+          .from("edital_phases")
+          .update({
+            phase_number: PHASE_NUMBER_RENUMBER_OFFSET + tempIndex,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", phaseId)
+          .eq("cargo_id", cargoId);
+
+        if (tempError) {
+          return { ok: false, message: mapDbErrorMessage("tema (preparo)", tempError) };
+        }
+      }
+
       for (const [phaseIndex, phase] of kindPhases.entries()) {
         const phaseTitle = phase.title.trim();
         const phasePayload = {
@@ -211,8 +241,7 @@ export async function updateEditalCore(
             .eq("cargo_id", cargoId);
 
           if (phaseUpdateError) {
-            console.error("[updateEdital] phase update failed", phaseUpdateError.message);
-            return { ok: false, message: "Não foi possível atualizar os temas." };
+            return { ok: false, message: mapDbErrorMessage("tema", phaseUpdateError) };
           }
           continue;
         }
@@ -223,12 +252,16 @@ export async function updateEditalCore(
         });
 
         if (phaseInsertError) {
-          console.error("[updateEdital] phase insert failed", phaseInsertError.message);
-          return { ok: false, message: "Não foi possível atualizar os temas." };
+          return { ok: false, message: mapDbErrorMessage("tema novo", phaseInsertError) };
         }
       }
     }
   }
 
   return { ok: true, message: "Edital atualizado com sucesso." };
+  } catch (error) {
+    console.error("[updateEdital] unexpected", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    return { ok: false, message: detail || "Erro inesperado ao salvar o edital." };
+  }
 }

@@ -112,18 +112,22 @@ export function EditEditalForm({
         }),
       });
 
-      const result = (await response.json().catch(() => null)) as {
-        ok?: boolean;
-        message?: string;
-      } | null;
+      const raw = await response.text();
+      let result: { ok?: boolean; message?: string } | null = null;
+      try {
+        result = raw ? (JSON.parse(raw) as { ok?: boolean; message?: string }) : null;
+      } catch {
+        result = null;
+      }
 
       if (!response.ok || !result?.ok) {
-        setError(
-          result?.message ??
-            (response.status === 413
-              ? "O edital é grande demais para enviar de uma vez. Reduza textos longos nos temas."
-              : "Não foi possível salvar o edital."),
-        );
+        const fallback =
+          response.status === 413
+            ? "O edital é grande demais para enviar de uma vez. Reduza textos longos nos temas."
+            : raw && raw.length < 200 && !raw.startsWith("{")
+              ? raw
+              : "Não foi possível salvar o edital.";
+        setError(result?.message ?? fallback);
         return;
       }
 

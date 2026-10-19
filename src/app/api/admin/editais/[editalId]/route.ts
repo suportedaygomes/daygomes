@@ -56,7 +56,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
     return NextResponse.json(
-      { ok: false, message: "Erro inesperado ao salvar o edital. Tente novamente em instantes." },
+      {
+        ok: false,
+        message:
+          detail || "Erro inesperado ao salvar o edital. Tente novamente em instantes.",
+      },
       { status: 500 },
     );
   }
