@@ -1,5 +1,9 @@
 import type { ProfileRow } from "@/lib/auth/profile";
 import { getAvatarPublicUrl } from "@/lib/auth/profile";
+import {
+  correctionsRemaining,
+  normalizeCorrectionQuota,
+} from "@/lib/editais/enrollment-quota";
 import { isStaffRole } from "@/lib/members/staff-member-profile";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,27 +15,16 @@ export type StaffMemberDirectoryRow = {
   cpf: string | null;
   whatsapp: string | null;
   avatarUrl: string | null;
+  /** Data de criação da conta na plataforma (ISO). */
+  joinedAt: string | null;
   editalCount: number;
-  activitiesSent: number;
-  themesTotal: number;
-  themesRemaining: number;
+  /** Correções já consumidas do plano (soma das mentorias). */
+  correctionsUsed: number;
+  /** Correções ainda disponíveis para envio (soma das mentorias). */
+  correctionsRemaining: number;
+  /** Cota total contratada (soma das mentorias, 0–4 cada). */
+  correctionsQuota: number;
 };
-
-async function buildPhasesPerEdital(admin: ReturnType<typeof createAdminClient>) {
-  const { data: cargos } = await admin.from("edital_cargos").select("id, edital_id");
-  const cargoToEdital = new Map((cargos ?? []).map((row) => [row.id, row.edital_id]));
-
-  const { data: phases } = await admin.from("edital_phases").select("id, cargo_id");
-  const countByEdital = new Map<string, number>();
-
-  for (const phase of phases ?? []) {
-    const editalId = cargoToEdital.get(phase.cargo_id);
-    if (!editalId) continue;
-    countByEdital.set(editalId, (countByEdital.get(editalId) ?? 0) + 1);
-  }
-
-  return countByEdital;
-}
 
 export async function listStaffMemberDirectory(
   staff: ProfileRow,
@@ -43,7 +36,7 @@ export async function listStaffMemberDirectory(
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, full_name, email, cpf, whatsapp, avatar_path, banned")
+    .select("id, full_name, email, cpf, whatsapp, avatar_path, banned, created_at")
     .eq("role", "membro")
     .eq("banned", false)
     .order("full_name", { ascending: true });
@@ -70,62 +63,72 @@ export async function listStaffMemberDirectory(
   const filteredProfiles = profiles.filter((row) => memberIds.includes(row.id));
   if (!filteredProfiles.length) return [];
 
-  const phasesPerEdital = await buildPhasesPerEdital(admin);
-
   const { data: enrollments } = await admin
     .from("member_edital_enrollments")
-    .select("id, member_id, edital_id")
+    .select("id, member_id, edital_id, correction_quota")
     .in("member_id", memberIds);
 
-  const enrollmentsByMember = new Map<string, { editalIds: Set<string>; enrollmentIds: string[] }>();
+  const enrollmentsByMember = new Map<
+    string,
+    { editalIds: Set<string>; rows: { id: string; correction_quota: number }[] }
+  >();
   for (const row of enrollments ?? []) {
     let bucket = enrollmentsByMember.get(row.member_id);
     if (!bucket) {
-      bucket = { editalIds: new Set(), enrollmentIds: [] };
+      bucket = { editalIds: new Set(), rows: [] };
       enrollmentsByMember.set(row.member_id, bucket);
     }
     bucket.editalIds.add(row.edital_id);
-    bucket.enrollmentIds.push(row.id);
+    bucket.rows.push({
+      id: row.id,
+      correction_quota: normalizeCorrectionQuota(row.correction_quota),
+    });
   }
 
   const enrollmentIds = (enrollments ?? []).map((row) => row.id);
-  const { data: submissions } = enrollmentIds.length
-    ? await admin
-        .from("phase_submissions")
-        .select("id, enrollment_id, phase_id")
-        .in("enrollment_id", enrollmentIds)
-    : { data: [] };
 
-  const submissionsByEnrollment = new Map<string, { count: number; phaseIds: Set<string> }>();
-  for (const row of submissions ?? []) {
-    let bucket = submissionsByEnrollment.get(row.enrollment_id);
-    if (!bucket) {
-      bucket = { count: 0, phaseIds: new Set() };
-      submissionsByEnrollment.set(row.enrollment_id, bucket);
+  const submissionCountByEnrollment = new Map<string, number>();
+  if (enrollmentIds.length) {
+    const { data: submissions } = await admin
+      .from("phase_submissions")
+      .select("enrollment_id")
+      .in("enrollment_id", enrollmentIds);
+
+    for (const row of submissions ?? []) {
+      submissionCountByEnrollment.set(
+        row.enrollment_id,
+        (submissionCountByEnrollment.get(row.enrollment_id) ?? 0) + 1,
+      );
     }
-    bucket.count += 1;
-    bucket.phaseIds.add(row.phase_id);
+
+    const { data: charges } = await admin
+      .from("enrollment_correction_quota_charges")
+      .select("enrollment_id")
+      .in("enrollment_id", enrollmentIds);
+
+    for (const row of charges ?? []) {
+      submissionCountByEnrollment.set(
+        row.enrollment_id,
+        (submissionCountByEnrollment.get(row.enrollment_id) ?? 0) + 1,
+      );
+    }
   }
 
   return filteredProfiles.map((profile) => {
     const bucket = enrollmentsByMember.get(profile.id);
     const editalIds = bucket?.editalIds ?? new Set<string>();
-    let themesTotal = 0;
-    for (const editalId of editalIds) {
-      themesTotal += phasesPerEdital.get(editalId) ?? 0;
-    }
 
-    let activitiesSent = 0;
-    const submittedPhaseIds = new Set<string>();
-    for (const enrollmentId of bucket?.enrollmentIds ?? []) {
-      const sub = submissionsByEnrollment.get(enrollmentId);
-      if (!sub) continue;
-      activitiesSent += sub.count;
-      for (const phaseId of sub.phaseIds) submittedPhaseIds.add(phaseId);
-    }
+    let correctionsQuota = 0;
+    let correctionsUsed = 0;
+    let correctionsRemainingTotal = 0;
 
-    const themesWithSubmission = submittedPhaseIds.size;
-    const themesRemaining = Math.max(0, themesTotal - themesWithSubmission);
+    for (const enrollment of bucket?.rows ?? []) {
+      const quota = enrollment.correction_quota;
+      const used = submissionCountByEnrollment.get(enrollment.id) ?? 0;
+      correctionsQuota += quota;
+      correctionsUsed += used;
+      correctionsRemainingTotal += correctionsRemaining(quota, used);
+    }
 
     return {
       id: profile.id,
@@ -134,10 +137,11 @@ export async function listStaffMemberDirectory(
       cpf: profile.cpf,
       whatsapp: profile.whatsapp,
       avatarUrl: getAvatarPublicUrl(supabaseUrl, profile.avatar_path),
+      joinedAt: profile.created_at ?? null,
       editalCount: editalIds.size,
-      activitiesSent,
-      themesTotal,
-      themesRemaining,
+      correctionsUsed,
+      correctionsRemaining: correctionsRemainingTotal,
+      correctionsQuota,
     };
   });
 }
