@@ -1,7 +1,10 @@
+import { AdminEnrollmentCorrectionQuotaEditor } from "@/components/painel/admin-enrollment-correction-quota-editor";
 import type { StaffMemberEnrollmentSummary } from "@/lib/members/staff-member-enrollments";
 
 type Props = {
+  memberId: string;
   enrollments: StaffMemberEnrollmentSummary[];
+  allowAdminQuotaEdit?: boolean;
 };
 
 function formatEnrolledAt(iso: string) {
@@ -12,7 +15,11 @@ function formatEnrolledAt(iso: string) {
   });
 }
 
-export function StaffMemberEnrollmentsPanel({ enrollments }: Props) {
+export function StaffMemberEnrollmentsPanel({
+  memberId,
+  enrollments,
+  allowAdminQuotaEdit = false,
+}: Props) {
   return (
     <section className="panel-card">
       <h2 className="text-lg font-semibold">Mentorias e correções</h2>
@@ -48,6 +55,15 @@ export function StaffMemberEnrollmentsPanel({ enrollments }: Props) {
                 </dd>
               </div>
             </dl>
+            {allowAdminQuotaEdit ? (
+              <AdminEnrollmentCorrectionQuotaEditor
+                enrollmentId={row.enrollmentId}
+                memberId={memberId}
+                correctionQuota={row.correctionQuota}
+                correctionsUsed={row.correctionsUsed}
+                correctionsRemaining={row.correctionsRemaining}
+              />
+            ) : null}
           </li>
         ))}
         {!enrollments.length ? (

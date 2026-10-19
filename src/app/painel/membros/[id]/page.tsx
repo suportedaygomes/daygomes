@@ -64,7 +64,11 @@ export default async function StaffMembroDetailPage({
         </section>
       ) : null}
 
-      <StaffMemberEnrollmentsPanel enrollments={enrollments} />
+      <StaffMemberEnrollmentsPanel
+        memberId={member.id}
+        enrollments={enrollments}
+        allowAdminQuotaEdit={profile.role === "admin"}
+      />
 
       <section className="panel-card">
         <h2 className="text-lg font-semibold">Envios recentes</h2>

@@ -10,7 +10,7 @@ import { computeEditalAverageByPhases } from "@/lib/editais/edital-phase-average
 import {
   correctionsRemaining,
   countEnrollmentChargedResubmitsUsed,
-  normalizeCorrectionQuota,
+  normalizeEnrollmentCorrectionQuota,
 } from "@/lib/editais/enrollment-quota";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
 import {
@@ -91,7 +91,7 @@ export default async function MembroEditaisPage() {
     );
 
     const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
-    const correctionQuota = normalizeCorrectionQuota(enrollment.correction_quota);
+    const correctionQuota = normalizeEnrollmentCorrectionQuota(enrollment.correction_quota);
     const chargedResubmits = await countEnrollmentChargedResubmitsUsed(enrollment.id);
     const correctionsUsed = (submissions?.length ?? 0) + chargedResubmits;
     const remaining = correctionsRemaining(correctionQuota, correctionsUsed);

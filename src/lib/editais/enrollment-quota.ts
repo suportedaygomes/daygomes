@@ -5,6 +5,8 @@ export const MIN_ADMIN_CORRECTION_QUOTA = 1;
 /** Cota mínima em mapeamento Kiwify (mentoria só conteúdo). */
 export const MIN_KIWIFY_CORRECTION_QUOTA = 0;
 export const MAX_CORRECTION_QUOTA = 4;
+/** Teto na inscrição quando o admin ajusta manualmente (alunos que já esgotaram o plano). */
+export const MAX_ADMIN_ENROLLMENT_CORRECTION_QUOTA = 99;
 
 /** Valor armazenado na inscrição ou exibido ao membro (0–4). */
 export function normalizeCorrectionQuota(value: unknown): number {
@@ -12,6 +14,16 @@ export function normalizeCorrectionQuota(value: unknown): number {
   if (!Number.isFinite(n)) return 0;
   return Math.min(
     MAX_CORRECTION_QUOTA,
+    Math.max(MIN_KIWIFY_CORRECTION_QUOTA, Math.round(n)),
+  );
+}
+
+/** Cota gravada em `member_edital_enrollments` (0–99; admin pode aumentar além do plano Kiwify). */
+export function normalizeEnrollmentCorrectionQuota(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(
+    MAX_ADMIN_ENROLLMENT_CORRECTION_QUOTA,
     Math.max(MIN_KIWIFY_CORRECTION_QUOTA, Math.round(n)),
   );
 }
@@ -65,5 +77,7 @@ export async function countEnrollmentCorrectionQuotaUsed(
 }
 
 export function correctionsRemaining(quota: number, used: number) {
-  return Math.max(0, normalizeCorrectionQuota(quota) - used);
+  const safeQuota = normalizeEnrollmentCorrectionQuota(quota);
+  const safeUsed = Math.max(0, Math.round(Number(used)) || 0);
+  return Math.max(0, safeQuota - safeUsed);
 }

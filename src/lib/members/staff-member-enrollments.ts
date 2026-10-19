@@ -1,6 +1,6 @@
 import {
   correctionsRemaining,
-  normalizeCorrectionQuota,
+  normalizeEnrollmentCorrectionQuota,
 } from "@/lib/editais/enrollment-quota";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -21,6 +21,9 @@ function describePlan(quota: number): string {
   }
   if (quota === 4) {
     return "Plano com 4 correções incluídas";
+  }
+  if (quota > 4) {
+    return `Cota ampliada pelo admin (${quota} correções no total do plano)`;
   }
   return `Plano com ${quota} correção${quota === 1 ? "" : "ões"} incluídas`;
 }
@@ -67,7 +70,7 @@ export async function listStaffMemberEnrollments(
 
   return enrollments.map((row) => {
     const edital = Array.isArray(row.editais) ? row.editais[0] : row.editais;
-    const quota = normalizeCorrectionQuota(row.correction_quota);
+    const quota = normalizeEnrollmentCorrectionQuota(row.correction_quota);
     const used = submissionCountByEnrollment.get(row.id) ?? 0;
     const remaining = correctionsRemaining(quota, used);
 

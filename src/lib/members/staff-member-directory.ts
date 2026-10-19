@@ -2,7 +2,7 @@ import type { ProfileRow } from "@/lib/auth/profile";
 import { getAvatarPublicUrl } from "@/lib/auth/profile";
 import {
   correctionsRemaining,
-  normalizeCorrectionQuota,
+  normalizeEnrollmentCorrectionQuota,
 } from "@/lib/editais/enrollment-quota";
 import { isStaffRole } from "@/lib/members/staff-member-profile";
 import { getSupabasePublicEnv } from "@/lib/supabase/env";
@@ -81,7 +81,7 @@ export async function listStaffMemberDirectory(
     bucket.editalIds.add(row.edital_id);
     bucket.rows.push({
       id: row.id,
-      correction_quota: normalizeCorrectionQuota(row.correction_quota),
+      correction_quota: normalizeEnrollmentCorrectionQuota(row.correction_quota),
     });
   }
 
