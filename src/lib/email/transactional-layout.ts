@@ -51,7 +51,7 @@ export function transactionalEmailPageOpen(title?: string): string {
   ${titleTag}
   <style>
     :root { color-scheme: light; supported-color-schemes: light; }
-    body, table, td { background-color: ${EMAIL_PAGE_BG} !important; }
+    body { margin: 0; padding: 0; background-color: ${EMAIL_PAGE_BG} !important; }
   </style>
 </head>
 <body bgcolor="${EMAIL_PAGE_BG}" style="margin:0;padding:0;background-color:${EMAIL_PAGE_BG};-webkit-text-size-adjust:100%;">
@@ -92,10 +92,10 @@ export function transactionalEmailCardClose(): string {
 }
 
 export function transactionalPrimaryButton(href: string, label: string): string {
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 24px;">
     <tr>
-      <td align="center" style="border-radius:10px;background-color:${EMAIL_PURPLE};">
-        <a href="${escapeHtml(href)}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${escapeHtml(label)}</a>
+      <td align="center" bgcolor="${EMAIL_PURPLE}" style="border-radius:10px;background-color:${EMAIL_PURPLE};">
+        <a href="${escapeHtml(href)}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:1.25;color:#ffffff !important;background-color:${EMAIL_PURPLE};text-decoration:none;border-radius:10px;">${escapeHtml(label)}</a>
       </td>
     </tr>
   </table>`;
