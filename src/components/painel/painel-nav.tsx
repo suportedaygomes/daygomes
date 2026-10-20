@@ -34,6 +34,7 @@ export function navItemsForRole(role: UserRole): NavItem[] {
         { href: "/painel/admin/usuarios", label: "Usuários" },
         { href: "/painel/admin/editais", label: "Editais" },
         { href: "/painel/admin/kiwify", label: "Kiwify" },
+        { href: "/painel/admin/gerenciamento", label: "Gerenciamento" },
       ];
     }
     return staff;
