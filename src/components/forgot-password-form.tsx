@@ -73,13 +73,16 @@ export function ForgotPasswordForm() {
         </label>
 
         {error ? (
-          <p role="alert" className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          <p
+            role="alert"
+            className="rounded-2xl border border-[color:var(--alert-error-border)] bg-[color:var(--alert-error-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--alert-error-text)]"
+          >
             {error}
           </p>
         ) : null}
 
         {success ? (
-          <p role="status" className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <p role="status" className="alert-success rounded-2xl px-4 py-3 text-sm leading-6">
             {success}
           </p>
         ) : null}

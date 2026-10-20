@@ -83,7 +83,10 @@ export function UpdatePasswordForm() {
         </label>
 
         {error ? (
-          <p role="alert" className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          <p
+            role="alert"
+            className="rounded-2xl border border-[color:var(--alert-error-border)] bg-[color:var(--alert-error-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--alert-error-text)]"
+          >
             {error}
           </p>
         ) : null}

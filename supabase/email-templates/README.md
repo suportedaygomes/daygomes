@@ -12,7 +12,7 @@ node scripts/strip-logonova-background.mjs
 node scripts/prepare-email-logo.mjs
 ```
 
-Isso cria `public/logonova-email.png` (fundo branco, sem cortes na foto/texto).
+Isso cria `public/logonova-email.png` (fundo branco, sem cortes na foto/texto). Os templates usam **fundo claro** (`#f5f3ef`), igual ao login.
 
 3. Faça **deploy** do site e confira no navegador:
    - `https://daygomes.com.br/logonova-email.png`

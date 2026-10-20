@@ -1,6 +1,6 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
-import { buildTransactionalEmail } from "@/lib/email/transactional-layout";
+import { buildTransactionalEmail, EMAIL_STRONG_COLOR } from "@/lib/email/transactional-layout";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 type SendAccessEmailInput = {
@@ -27,12 +27,12 @@ export async function sendAccessEmail(input: SendAccessEmailInput): Promise<Send
       : `Sua compra na Kiwify foi confirmada e o acesso à plataforma ${SITE_DISPLAY_NAME} já está liberado.`;
 
   const productLine = input.productName
-    ? `<p style="margin:0 0 12px;">Curso/produto: <strong style="color:#f6f3ef;">${escapeHtml(input.productName)}</strong></p>`
+    ? `<p style="margin:0 0 12px;">Curso/produto: <strong style="color:${EMAIL_STRONG_COLOR};">${escapeHtml(input.productName)}</strong></p>`
     : "";
 
   const credentialsBlock = isNewAccount
-    ? `<p style="margin:0 0 12px;"><strong style="color:#f6f3ef;">E-mail:</strong> ${escapeHtml(input.to)}<br />
-       <strong style="color:#f6f3ef;">Senha temporária:</strong> ${escapeHtml(input.password ?? "")}</p>
+    ? `<p style="margin:0 0 12px;"><strong style="color:${EMAIL_STRONG_COLOR};">E-mail:</strong> ${escapeHtml(input.to)}<br />
+       <strong style="color:${EMAIL_STRONG_COLOR};">Senha temporária:</strong> ${escapeHtml(input.password ?? "")}</p>
        <p style="margin:0 0 12px;">Recomendamos alterar a senha em <em>Meu perfil</em> após o primeiro acesso.</p>`
     : `<p style="margin:0 0 12px;">Use o mesmo e-mail e senha que você já utiliza na plataforma.</p>`;
 
@@ -59,12 +59,12 @@ export async function sendRefundNoticeEmail(input: {
   productName?: string;
 }): Promise<SendResult> {
   const productLine = input.productName
-    ? `<p style="margin:0 0 12px;">Produto: <strong style="color:#f6f3ef;">${escapeHtml(input.productName)}</strong></p>`
+    ? `<p style="margin:0 0 12px;">Produto: <strong style="color:${EMAIL_STRONG_COLOR};">${escapeHtml(input.productName)}</strong></p>`
     : "";
 
   const bodyHtml = `
       <p style="margin:0 0 12px;">Olá,</p>
-      <p style="margin:0 0 12px;">Identificamos o <strong style="color:#f6f3ef;">reembolso</strong> da sua compra na Kiwify.</p>
+      <p style="margin:0 0 12px;">Identificamos o <strong style="color:${EMAIL_STRONG_COLOR};">reembolso</strong> da sua compra na Kiwify.</p>
       ${productLine}
       <p style="margin:0 0 12px;">O acesso ao conteúdo vinculado a essa compra foi encerrado na plataforma ${SITE_DISPLAY_NAME}.</p>
       <p style="margin:0;">Se você acredita que isso é um engano, entre em contato: acesso@daygomes.com.br</p>`;

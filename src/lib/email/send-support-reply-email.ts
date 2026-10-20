@@ -31,7 +31,7 @@ type SendSupportReplyEmailInput = {
 function replyAttachmentHtml(attachment: ReplyAttachment): string {
   const filename = `imagem-resposta.${extensionForImageMime(attachment.mime)}`;
   const note =
-    `<p style="margin:16px 0 8px;font-size:14px;color:#b7b1aa;">A equipe enviou uma imagem com esta resposta (também em anexo: <strong style="color:#f6f3ef;">${escapeHtml(filename)}</strong>).</p>`;
+    `<p style="margin:16px 0 8px;font-size:14px;color:#5f5a54;">A equipe enviou uma imagem com esta resposta (também em anexo: <strong style="color:#121216;">${escapeHtml(filename)}</strong>).</p>`;
 
   if (attachment.buffer.length > INLINE_IMAGE_MAX_BYTES) {
     return note;
@@ -60,7 +60,7 @@ export async function sendSupportReplyEmail(
 
   const bodyHtml = `
       <p style="margin:0 0 12px;">${greeting},</p>
-      <p style="margin:0 0 12px;">Respondemos seu chamado <strong style="color:#f6f3ef;">${escapeHtml(input.ticketTitle)}</strong> (protocolo <strong style="color:#f6f3ef;">${escapeHtml(protocol)}</strong>).</p>
+      <p style="margin:0 0 12px;">Respondemos seu chamado <strong style="color:#121216;">${escapeHtml(input.ticketTitle)}</strong> (protocolo <strong style="color:#121216;">${escapeHtml(protocol)}</strong>).</p>
       ${introExtra}
       ${transactionalQuoteBlock(quoteText)}
       ${input.attachment ? replyAttachmentHtml(input.attachment) : ""}`;

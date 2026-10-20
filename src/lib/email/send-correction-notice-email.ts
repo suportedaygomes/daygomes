@@ -21,8 +21,8 @@ export async function sendCorrectionNoticeEmail(
 
   const bodyHtml = `
       <p style="margin:0 0 12px;">${greeting},</p>
-      <p style="margin:0 0 12px;">Sua atividade no edital <strong style="color:#f6f3ef;">${escapeHtml(input.editalTitle)}</strong> foi corrigida.</p>
-      <p style="margin:0 0 8px;"><strong style="color:#f6f3ef;">${escapeHtml(phaseLabel)}</strong></p>
+      <p style="margin:0 0 12px;">Sua atividade no edital <strong style="color:#121216;">${escapeHtml(input.editalTitle)}</strong> foi corrigida.</p>
+      <p style="margin:0 0 8px;"><strong style="color:#121216;">${escapeHtml(phaseLabel)}</strong></p>
       <p style="margin:0 0 12px;">Nota: <strong style="color:#ab5fd0;font-size:18px;">${escapeHtml(String(input.grade))}</strong></p>
       <p style="margin:0;">No painel você pode baixar seu envio original, ver os grifos no texto e ler os comentários de cada erro.</p>`;
 

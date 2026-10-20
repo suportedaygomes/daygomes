@@ -13,8 +13,17 @@ const EMAIL_LOGO_DISPLAY_HEIGHT = Math.round(
   (EMAIL_LOGO_DISPLAY_WIDTH * EMAIL_LOGO_NATURAL_HEIGHT) / EMAIL_LOGO_NATURAL_WIDTH,
 );
 
-const EMAIL_PAGE_BG = "#07070a";
-const EMAIL_CARD_BG = "#16161c";
+/** Alinhado ao login (`login-forced-light`). */
+const EMAIL_PAGE_BG = "#f5f3ef";
+const EMAIL_CARD_BG = "#ffffff";
+const EMAIL_BORDER = "#e5e2dc";
+const EMAIL_TEXT = "#121216";
+const EMAIL_TEXT_MUTED = "#5f5a54";
+const EMAIL_PURPLE = "#8e3ebe";
+const EMAIL_LINK = "#7a32a8";
+
+/** Destaque em negrito no corpo do e-mail (use em templates Resend). */
+export const EMAIL_STRONG_COLOR = EMAIL_TEXT;
 
 export function transactionalLogoUrl(): string {
   const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? DEFAULT_SITE;
@@ -26,14 +35,7 @@ export function transactionalEmailLogoImg(): string {
   const logoUrl = transactionalLogoUrl();
   const w = EMAIL_LOGO_DISPLAY_WIDTH;
   const h = EMAIL_LOGO_DISPLAY_HEIGHT;
-  const img = `<img src="${escapeHtml(logoUrl)}" width="${w}" height="${h}" alt="${escapeHtml(SITE_DISPLAY_NAME)}" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:${w}px;max-width:100%;height:auto;" />`;
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
-    <tr>
-      <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;border-radius:14px;padding:14px 18px;">
-        ${img}
-      </td>
-    </tr>
-  </table>`;
+  return `<img src="${escapeHtml(logoUrl)}" width="${w}" height="${h}" alt="${escapeHtml(SITE_DISPLAY_NAME)}" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;width:${w}px;max-width:100%;height:auto;" />`;
 }
 
 /** Abertura HTML compartilhada (Supabase Auth e layout transacional). */
@@ -44,11 +46,11 @@ export function transactionalEmailPageOpen(title?: string): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="supported-color-schemes" content="dark" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   ${titleTag}
   <style>
-    :root { color-scheme: dark; supported-color-schemes: dark; }
+    :root { color-scheme: light; supported-color-schemes: light; }
     body, table, td { background-color: ${EMAIL_PAGE_BG} !important; }
   </style>
 </head>
@@ -75,16 +77,16 @@ export function transactionalEmailPageClose(): string {
 
 export function transactionalEmailCardOpen(): string {
   return `<tr>
-            <td bgcolor="${EMAIL_CARD_BG}" style="background-color:${EMAIL_CARD_BG};border:1px solid #2a2a32;border-radius:16px;padding:32px 28px;">`;
+            <td bgcolor="${EMAIL_CARD_BG}" style="background-color:${EMAIL_CARD_BG};border:1px solid ${EMAIL_BORDER};border-radius:16px;padding:32px 28px;">`;
 }
 
 export function transactionalEmailCardClose(): string {
   return `            </td>
           </tr>
           <tr>
-            <td align="center" bgcolor="${EMAIL_PAGE_BG}" style="padding-top:24px;background-color:${EMAIL_PAGE_BG};font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6f6a64;">
-              ${escapeHtml(SITE_DISPLAY_NAME)} · <a href="https://daygomes.com.br" style="color:#ab5fd0;text-decoration:none;">daygomes.com.br</a><br />
-              <a href="mailto:acesso@daygomes.com.br" style="color:#ab5fd0;text-decoration:none;">acesso@daygomes.com.br</a>
+            <td align="center" bgcolor="${EMAIL_PAGE_BG}" style="padding-top:24px;background-color:${EMAIL_PAGE_BG};font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:${EMAIL_TEXT_MUTED};">
+              ${escapeHtml(SITE_DISPLAY_NAME)} · <a href="https://daygomes.com.br" style="color:${EMAIL_LINK};text-decoration:none;">daygomes.com.br</a><br />
+              <a href="mailto:acesso@daygomes.com.br" style="color:${EMAIL_LINK};text-decoration:none;">acesso@daygomes.com.br</a>
             </td>
           </tr>`;
 }
@@ -92,7 +94,7 @@ export function transactionalEmailCardClose(): string {
 export function transactionalPrimaryButton(href: string, label: string): string {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
     <tr>
-      <td align="center" style="border-radius:10px;background-color:#8e3ebe;">
+      <td align="center" style="border-radius:10px;background-color:${EMAIL_PURPLE};">
         <a href="${escapeHtml(href)}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${escapeHtml(label)}</a>
       </td>
     </tr>
@@ -100,7 +102,7 @@ export function transactionalPrimaryButton(href: string, label: string): string 
 }
 
 export function transactionalQuoteBlock(text: string): string {
-  return `<p style="margin:16px 0;padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#e8e4df;background-color:#121216;border:1px solid rgba(255,255,255,0.08);border-radius:10px;">${escapeHtml(text)}</p>`;
+  return `<p style="margin:16px 0;padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:${EMAIL_TEXT};background-color:#f0eeea;border:1px solid ${EMAIL_BORDER};border-radius:10px;">${escapeHtml(text)}</p>`;
 }
 
 type BuildTransactionalEmailInput = {
@@ -112,20 +114,20 @@ type BuildTransactionalEmailInput = {
   footerNote?: string;
 };
 
-/** Layout escuro do site + logo nova em cartão branco (logonova-email.png). */
+/** Layout claro (login) + logo nova em fundo branco (logonova-email.png). */
 export function buildTransactionalEmail(input: BuildTransactionalEmailInput): string {
   const button = input.button
     ? transactionalPrimaryButton(input.button.href, input.button.label)
     : "";
   const footerNote = input.footerNote
-    ? `<p style="margin:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#8a847d;">${input.footerNote}</p>`
+    ? `<p style="margin:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:${EMAIL_TEXT_MUTED};">${input.footerNote}</p>`
     : "";
 
   return `${transactionalEmailPageOpen()}
           ${transactionalEmailCardOpen()}
-              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#ab5fd0;">${escapeHtml(input.eyebrow)}</p>
-              <h1 style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:22px;line-height:1.3;font-weight:700;color:#f6f3ef;">${escapeHtml(input.title)}</h1>
-              <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#b7b1aa;">
+              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${EMAIL_PURPLE};">${escapeHtml(input.eyebrow)}</p>
+              <h1 style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:22px;line-height:1.3;font-weight:700;color:${EMAIL_TEXT};">${escapeHtml(input.title)}</h1>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:${EMAIL_TEXT_MUTED};">
                 ${input.bodyHtml}
               </div>
               ${button}
