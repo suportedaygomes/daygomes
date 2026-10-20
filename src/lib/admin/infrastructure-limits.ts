@@ -17,6 +17,11 @@ export function getResendMonthlyLimit() {
   return parsePositiveInt(process.env.INFRA_RESEND_MONTHLY_LIMIT, 3_000);
 }
 
+/** E-mails fora do lote em massa (correção, suporte, etc.) — reserva no limite diário. */
+export function getResendReservedDaily() {
+  return parsePositiveInt(process.env.INFRA_RESEND_RESERVED_DAILY, 30);
+}
+
 /** Plano gratuito Supabase: ~500 MB de banco. */
 export function getSupabaseDatabaseLimitBytes() {
   return parsePositiveInt(process.env.INFRA_SUPABASE_DB_LIMIT_MB, 500) * MB;

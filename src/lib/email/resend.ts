@@ -54,7 +54,16 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
     });
 
     if (error) {
-      return { ok: false, error: error.message };
+      const raw = error.message ?? "Falha ao enviar e-mail.";
+      const lower = raw.toLowerCase();
+      if (lower.includes("rate") || lower.includes("limit") || lower.includes("quota")) {
+        return {
+          ok: false,
+          error:
+            "Limite diário do Resend atingido. Aguarde até amanhã ou aumente o plano antes de reenviar.",
+        };
+      }
+      return { ok: false, error: raw };
     }
 
     return { ok: true, id: data?.id };

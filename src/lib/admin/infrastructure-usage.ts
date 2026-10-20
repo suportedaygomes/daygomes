@@ -5,7 +5,8 @@ import {
   getSupabaseDatabaseLimitBytes,
   getSupabaseStorageLimitBytes,
 } from "@/lib/admin/infrastructure-limits";
-import { todayInSaoPaulo } from "@/lib/admin/bulk-member-access-email";
+import { todayInSaoPaulo } from "@/lib/admin/sao-paulo-day";
+import { getResendDailyUsage } from "@/lib/admin/resend-platform-usage";
 import { isEmailConfigured } from "@/lib/email/resend";
 import { measureR2BucketUsage } from "@/lib/r2/bucket-usage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -134,12 +135,10 @@ function warningForPercent(percent: number) {
 export async function loadInfrastructureUsageReport(): Promise<InfrastructureUsageReport> {
   const admin = createAdminClient();
   const { start, end, dayLabel } = monthBoundsSaoPaulo();
-  const dayStart = `${dayLabel}T00:00:00-03:00`;
-  const dayEnd = `${dayLabel}T23:59:59-03:00`;
 
   const [
     emailsMonth,
-    emailsToday,
+    resendUsage,
     bulkMonth,
     bulkTodayRow,
     r2Usage,
@@ -148,7 +147,7 @@ export async function loadInfrastructureUsageReport(): Promise<InfrastructureUsa
     authUsers,
   ] = await Promise.all([
     countPlatformEmailsSent(admin, start, end),
-    countPlatformEmailsSent(admin, dayStart, dayEnd),
+    getResendDailyUsage(admin),
     sumBulkEmailsThisMonth(admin),
     admin
       .from("admin_email_daily_counters")
@@ -162,8 +161,8 @@ export async function loadInfrastructureUsageReport(): Promise<InfrastructureUsa
   ]);
 
   const bulkToday = bulkTodayRow.data?.bulk_access_sent ?? 0;
-  const platformEmailsMonth = emailsMonth + bulkMonth;
-  const platformEmailsToday = emailsToday + bulkToday;
+  const platformEmailsMonth = emailsMonth;
+  const platformEmailsToday = resendUsage.accessEmailsSent;
 
   const resendDailyLimit = getResendDailyLimit();
   const resendMonthlyLimit = getResendMonthlyLimit();
@@ -201,26 +200,26 @@ export async function loadInfrastructureUsageReport(): Promise<InfrastructureUsa
       dashboardUrl: "https://resend.com/emails",
       metrics: [
         {
-          label: "Envios hoje (registrados na plataforma)",
+          label: "E-mails de acesso enviados hoje (Resend)",
           used: platformEmailsToday,
           limit: resendDailyLimit,
           unit: "count",
-          detail: `Acessos Kiwify/admin hoje: ${emailsToday} · lote em massa: ${bulkToday}`,
+          detail: `Inclui lote em massa (${bulkToday} hoje). Restam ~${resendUsage.remainingTotal} no limite diário.`,
           warning: warningForPercent(dailyPercent),
         },
         {
-          label: "Envios no mês (registrados na plataforma)",
+          label: "E-mails de acesso no mês",
           used: platformEmailsMonth,
           limit: resendMonthlyLimit,
           unit: "count",
-          detail: `Acessos no mês: ${emailsMonth} · lote em massa no mês: ${bulkMonth}`,
+          detail: `Envios em massa no mês: ${bulkMonth} (já contados nos acessos).`,
           warning: warningForPercent(monthlyPercent),
         },
       ],
       notes: [
-        "Correções, suporte e lembretes também usam o Resend, mas podem não aparecer nesta contagem.",
-        "Confira o painel do Resend para o total exato e cobranças.",
-        "No plano gratuito costuma haver cerca de 100 e-mails/dia e 3.000/mês (valores ajustáveis em INFRA_RESEND_*).",
+        "Correções, suporte e lembretes também usam o Resend e não entram nesta contagem.",
+        "No Resend, status “Sent” = aceito; “Delivered” = chegou na caixa (pode demorar minutos).",
+        "Confira o painel do Resend para o total exato. Plano gratuito: ~100/dia e 3.000/mês (INFRA_RESEND_*).",
       ],
     },
     {

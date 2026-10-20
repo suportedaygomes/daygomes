@@ -110,7 +110,7 @@ export function BulkMemberAccessEmailPanel({ initialStatus }: BulkMemberAccessEm
         } else {
           failed += 1;
           const failMessage = step.message ?? "Falha no envio";
-          if (failMessage.includes("Limite diário")) {
+          if (failMessage.includes("Limite diário") || failMessage.includes("Resend")) {
             setProgressRows((prev) =>
               prev.map((item, i) =>
                 i === index
@@ -207,7 +207,7 @@ export function BulkMemberAccessEmailPanel({ initialStatus }: BulkMemberAccessEm
               dia (dia {status.dayLabel}, fuso Brasília).
             </p>
 
-            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
               <li className="rounded-xl border border-white/10 bg-field/50 px-3 py-2">
                 <p className="text-xs text-muted">Elegíveis agora</p>
                 <p className="text-xl font-semibold tabular-nums">{status.eligibleCount}</p>
@@ -217,14 +217,26 @@ export function BulkMemberAccessEmailPanel({ initialStatus }: BulkMemberAccessEm
                 <p className="text-xl font-semibold tabular-nums">{status.sentToday}</p>
               </li>
               <li className="rounded-xl border border-white/10 bg-field/50 px-3 py-2">
-                <p className="text-xs text-muted">Restam hoje (lote)</p>
-                <p className="text-xl font-semibold tabular-nums">{status.remainingToday}</p>
-              </li>
-              <li className="rounded-xl border border-white/10 bg-field/50 px-3 py-2">
                 <p className="text-xs text-muted">Próximo clique envia até</p>
                 <p className="text-xl font-semibold tabular-nums">{maxNow}</p>
               </li>
+              <li className="rounded-xl border border-white/10 bg-field/50 px-3 py-2 sm:col-span-2 lg:col-span-3">
+                <p className="text-xs text-muted">Resend hoje (todos os e-mails de acesso)</p>
+                <p className="text-lg font-semibold tabular-nums">
+                  {status.resendAccessSentToday} / {status.resendDailyLimit}
+                  <span className="ml-2 text-sm font-normal text-muted">
+                    (restam {status.resendRemainingToday} para novo lote)
+                  </span>
+                </p>
+              </li>
             </ul>
+
+            {status.resendRemainingToday <= 0 ? (
+              <p className="alert-error mt-3 text-sm">
+                Limite diário do Resend atingido. Os próximos envios falham até amanhã (fuso Brasília).
+                No painel do Resend, “Sent” ainda pode virar “Delivered” em alguns minutos.
+              </p>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <button

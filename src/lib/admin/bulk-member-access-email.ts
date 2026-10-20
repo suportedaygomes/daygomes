@@ -1,14 +1,12 @@
+import { getResendDailyUsage } from "@/lib/admin/resend-platform-usage";
+import { todayInSaoPaulo } from "@/lib/admin/sao-paulo-day";
 import { resendMemberAccessWithNewPassword } from "@/lib/admin/resend-member-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Limite de envios em massa por dia (Resend free ~100/dia; reserva 30 para outros e-mails). */
 export const BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT = 70;
 
-const SAO_PAULO_TZ = "America/Sao_Paulo";
-
-export function todayInSaoPaulo(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: SAO_PAULO_TZ }).format(new Date());
-}
+export { todayInSaoPaulo };
 
 async function getBulkSentToday(admin: ReturnType<typeof createAdminClient>, day: string) {
   const { data } = await admin
@@ -166,9 +164,17 @@ export async function planBulkMemberAccessBatch(): Promise<BulkMemberAccessBatch
   const admin = createAdminClient();
   const dayLabel = todayInSaoPaulo();
   const sentToday = await getBulkSentToday(admin, dayLabel);
-  const remainingToday = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+  const bulkRemaining = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+  const resendUsage = await getResendDailyUsage(admin);
+  const remainingToday = Math.min(bulkRemaining, resendUsage.remainingForBulk);
 
   if (remainingToday <= 0) {
+    if (resendUsage.remainingForBulk <= 0 && bulkRemaining > 0) {
+      return {
+        ok: false,
+        message: `Limite diário do Resend atingido (${resendUsage.accessEmailsSent}/${resendUsage.limit} e-mails de acesso hoje). Tente amanhã ou aumente INFRA_RESEND_DAILY_LIMIT.`,
+      };
+    }
     return {
       ok: false,
       message: `Limite diário atingido (${BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT} envios em massa hoje). Tente amanhã.`,
@@ -242,9 +248,17 @@ export async function sendOneBulkMemberAccessEmail(memberId: string): Promise<Bu
   const admin = createAdminClient();
   const dayLabel = todayInSaoPaulo();
   const sentToday = await getBulkSentToday(admin, dayLabel);
-  const remainingToday = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+  const bulkRemaining = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+  const resendUsage = await getResendDailyUsage(admin);
 
-  if (remainingToday <= 0) {
+  if (resendUsage.remainingForBulk <= 0) {
+    return {
+      ok: false,
+      message: `Limite diário do Resend atingido (${resendUsage.accessEmailsSent}/${resendUsage.limit} e-mails de acesso hoje).`,
+    };
+  }
+
+  if (bulkRemaining <= 0) {
     return {
       ok: false,
       message: `Limite diário de envios em massa atingido (${BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT}/dia).`,
@@ -273,13 +287,16 @@ export async function sendOneBulkMemberAccessEmail(memberId: string): Promise<Bu
 
   await addBulkSentToday(admin, dayLabel, 1);
   const sentTodayAfter = await getBulkSentToday(admin, dayLabel);
+  const resendAfter = await getResendDailyUsage(admin);
+  const bulkRemAfter = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentTodayAfter);
+  const remainingToday = Math.min(bulkRemAfter, resendAfter.remainingForBulk);
 
   return {
     ok: true,
     fullName: profile?.full_name?.trim() || "Aluno",
     email: profile?.email?.trim() || "",
     sentToday: sentTodayAfter,
-    remainingToday: Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentTodayAfter),
+    remainingToday,
   };
 }
 
@@ -289,6 +306,9 @@ export type BulkMemberAccessEmailStatus = {
   remainingToday: number;
   eligibleCount: number;
   dayLabel: string;
+  resendDailyLimit: number;
+  resendAccessSentToday: number;
+  resendRemainingToday: number;
 };
 
 export async function getBulkMemberAccessEmailStatus(): Promise<BulkMemberAccessEmailStatus> {
@@ -296,13 +316,19 @@ export async function getBulkMemberAccessEmailStatus(): Promise<BulkMemberAccess
   const dayLabel = todayInSaoPaulo();
   const sentToday = await getBulkSentToday(admin, dayLabel);
   const eligible = await listEligibleBulkMemberAccessIds();
+  const resendUsage = await getResendDailyUsage(admin);
+  const bulkRemaining = Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday);
+  const remainingToday = Math.min(bulkRemaining, resendUsage.remainingForBulk);
 
   return {
     dailyLimit: BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT,
     sentToday,
-    remainingToday: Math.max(0, BULK_MEMBER_ACCESS_EMAIL_DAILY_LIMIT - sentToday),
+    remainingToday,
     eligibleCount: eligible.length,
     dayLabel,
+    resendDailyLimit: resendUsage.limit,
+    resendAccessSentToday: resendUsage.accessEmailsSent,
+    resendRemainingToday: resendUsage.remainingForBulk,
   };
 }
 
