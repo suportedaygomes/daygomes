@@ -19,16 +19,23 @@ export {
   type EditalAttachmentView,
 } from "@/lib/editais/attachments-shared";
 
-export async function listEditalAttachments(editalId: string): Promise<EditalAttachmentView[]> {
+export async function listEditalAttachments(
+  editalId: string,
+  options?: { includeUnpublished?: boolean },
+): Promise<EditalAttachmentView[]> {
   const admin = createAdminClient();
-  const { data } = await admin
+  let query = admin
     .from("edital_attachments")
     .select(
-      "id, edital_id, title, description, storage_path, original_filename, mime_type, file_size, sort_order, created_at",
+      "id, edital_id, title, description, storage_path, original_filename, mime_type, file_size, sort_order, is_published, created_at",
     )
-    .eq("edital_id", editalId)
-    .order("sort_order")
-    .order("created_at");
+    .eq("edital_id", editalId);
+
+  if (!options?.includeUnpublished) {
+    query = query.eq("is_published", true);
+  }
+
+  const { data } = await query.order("sort_order").order("created_at");
 
   return (data ?? []).map((row) => mapEditalAttachment(row as EditalAttachmentRow));
 }
@@ -43,9 +50,10 @@ export async function listEditalAttachmentsByEditalIds(
   const { data } = await admin
     .from("edital_attachments")
     .select(
-      "id, edital_id, title, description, storage_path, original_filename, mime_type, file_size, sort_order, created_at",
+      "id, edital_id, title, description, storage_path, original_filename, mime_type, file_size, sort_order, is_published, created_at",
     )
     .in("edital_id", editalIds)
+    .eq("is_published", true)
     .order("sort_order")
     .order("created_at");
 

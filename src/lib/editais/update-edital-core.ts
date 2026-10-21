@@ -28,7 +28,7 @@ const PHASE_NUMBER_RENUMBER_OFFSET = 10_000;
 function mapDbErrorMessage(context: string, error: { code?: string; message?: string }) {
   console.error(`[updateEdital] ${context}`, error.code, error.message);
   if (error.code === "23505") {
-    return "Conflito ao salvar os temas (número duplicado). Tente salvar de novo.";
+    return "Conflito ao salvar os temas (número duplicado). Aguarde o salvamento terminar e clique em Salvar apenas uma vez. Se persistir, atualize a página e tente de novo.";
   }
   if (error.code === "42703" || error.code === "PGRST204") {
     return "Banco desatualizado: falta uma coluna esperada. Rode as migrations do Supabase.";
@@ -203,18 +203,26 @@ export async function updateEditalCore(
     }
 
     for (const [activityKind, kindPhases] of phasesByKind) {
-      const existingIds = kindPhases
-        .map((phase) => phase.id)
-        .filter((id): id is string => Boolean(id));
+      const { data: dbKindPhases, error: listPhasesError } = await admin
+        .from("edital_phases")
+        .select("id")
+        .eq("cargo_id", cargoId)
+        .eq("activity_kind", activityKind)
+        .order("phase_number", { ascending: true })
+        .order("id", { ascending: true });
 
-      for (const [tempIndex, phaseId] of existingIds.entries()) {
+      if (listPhasesError) {
+        return { ok: false, message: mapDbErrorMessage("tema (listagem)", listPhasesError) };
+      }
+
+      for (const [tempIndex, row] of (dbKindPhases ?? []).entries()) {
         const { error: tempError } = await admin
           .from("edital_phases")
           .update({
-            phase_number: PHASE_NUMBER_RENUMBER_OFFSET + tempIndex,
+            phase_number: PHASE_NUMBER_RENUMBER_OFFSET + tempIndex + 1,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", phaseId)
+          .eq("id", row.id)
           .eq("cargo_id", cargoId);
 
         if (tempError) {

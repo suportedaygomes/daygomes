@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminApiClientOrError } from "@/lib/admin/create-admin-api-client";
 import { verifyAdminApi } from "@/lib/admin/verify-admin-api";
 import type { CargoEditInput } from "@/lib/editais/types";
+import { clearEditalAdminDraftSection } from "@/lib/editais/edital-admin-draft-server";
 import { updateEditalCore } from "@/lib/editais/update-edital-core";
 
 type RouteContext = { params: Promise<{ editalId: string }> };
@@ -43,6 +44,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!result.ok) {
       return NextResponse.json(result, { status: 400 });
     }
+
+    await clearEditalAdminDraftSection(adminResult.admin, editalId, "structure");
 
     return NextResponse.json(result);
   } catch (error) {

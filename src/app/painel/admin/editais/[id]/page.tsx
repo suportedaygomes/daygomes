@@ -7,7 +7,9 @@ import { formatEditalDefaultCorrectionQuota } from "@/components/editais/correct
 import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
 import { EnrollMemberForm } from "@/components/editais/enroll-member-form";
+import { loadEditalAdminDraft } from "@/lib/editais/edital-admin-draft-server";
 import { listEditalAttachments } from "@/lib/editais/attachments";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -22,7 +24,9 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
   const supabase = await createClient();
   const { data: edital } = await supabase
     .from("editais")
-    .select("id, title, evaluation_rubric, submission_period_days, default_correction_quota")
+    .select(
+      "id, title, evaluation_rubric, submission_period_days, default_correction_quota, updated_at",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -54,7 +58,14 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
     .select("id, member_id, correction_quota, profiles(full_name, email)")
     .eq("edital_id", id);
 
-  const attachments = await listEditalAttachments(id);
+  const attachments = await listEditalAttachments(id, { includeUnpublished: true });
+
+  let adminDraft = null;
+  try {
+    adminDraft = await loadEditalAdminDraft(createAdminClient(), id);
+  } catch {
+    adminDraft = null;
+  }
 
   return (
     <PainelPage gap="lg">
@@ -81,6 +92,8 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
 
       <EditEditalForm
         editalId={id}
+        publishedRevision={edital.updated_at}
+        adminDraft={adminDraft}
         initialTitle={edital.title}
         initialSubmissionPeriodDays={normalizeSubmissionPeriodDays(
           edital.submission_period_days,
@@ -107,6 +120,8 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
 
       <EditalEvaluationRubricAdmin
         editalId={id}
+        publishedRevision={edital.updated_at}
+        adminDraft={adminDraft}
         initialRubric={parseEvaluationRubric(edital.evaluation_rubric)}
       />
 

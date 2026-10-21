@@ -1,11 +1,22 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
 import { CorrectionQuotaSelect } from "@/components/editais/correction-quota-select";
+import { EditalDraftStatusBanner } from "@/components/editais/edital-draft-status-banner";
 import { SubmissionPeriodPerCargoHints } from "@/components/editais/submission-period-per-cargo-hints";
+import {
+  clearEditalAdminDraftSectionClient,
+  migrateLocalEditalDraftToServer,
+  useEditalAdminDraftSync,
+} from "@/hooks/use-edital-admin-draft-sync";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
+import type { EditalAdminDraftView } from "@/lib/editais/edital-admin-draft";
+import {
+  hasEditalEditDraftChanges,
+  type EditalEditFormSnapshot,
+} from "@/lib/editais/edital-edit-draft";
 import type { CargoEditInput, PhaseEditInput } from "@/lib/editais/types";
 
 type InitialCargo = {
@@ -23,6 +34,8 @@ type InitialCargo = {
 
 type Props = {
   editalId: string;
+  publishedRevision: string;
+  adminDraft: EditalAdminDraftView | null;
   initialTitle: string;
   initialSubmissionPeriodDays: number;
   initialDefaultCorrectionQuota: number;
@@ -60,6 +73,20 @@ function mapInitialCargos(cargos: InitialCargo[]): CargoEditInput[] {
   }));
 }
 
+function buildPublishedSnapshot(
+  title: string,
+  submissionPeriodDays: number,
+  defaultCorrectionQuota: number,
+  initialCargos: InitialCargo[],
+): EditalEditFormSnapshot {
+  return {
+    title,
+    submissionPeriodDays,
+    defaultCorrectionQuota,
+    cargos: mapInitialCargos(initialCargos),
+  };
+}
+
 function phasesForKind(cargo: CargoEditInput, kind: ActivityKind) {
   return cargo.phases.filter((p) => p.activityKind === kind);
 }
@@ -73,26 +100,145 @@ function setPhasesForKind(
   return { ...cargo, phases: [...other, ...nextKindPhases.map((p) => ({ ...p, activityKind: kind }))] };
 }
 
+function applySnapshot(snapshot: EditalEditFormSnapshot) {
+  return {
+    title: snapshot.title,
+    submissionPeriodDays: snapshot.submissionPeriodDays,
+    defaultCorrectionQuota: snapshot.defaultCorrectionQuota,
+    cargos: snapshot.cargos,
+  };
+}
+
 export function EditEditalForm({
   editalId,
+  publishedRevision,
+  adminDraft,
   initialTitle,
   initialSubmissionPeriodDays,
   initialDefaultCorrectionQuota,
   initialCargos,
 }: Props) {
   const router = useRouter();
-  const [title, setTitle] = useState(initialTitle);
-  const [submissionPeriodDays, setSubmissionPeriodDays] = useState(initialSubmissionPeriodDays);
-  const [defaultCorrectionQuota, setDefaultCorrectionQuota] = useState(
-    initialDefaultCorrectionQuota,
+  const published = useMemo(
+    () =>
+      buildPublishedSnapshot(
+        initialTitle,
+        initialSubmissionPeriodDays,
+        initialDefaultCorrectionQuota,
+        initialCargos,
+      ),
+    [
+      initialTitle,
+      initialSubmissionPeriodDays,
+      initialDefaultCorrectionQuota,
+      initialCargos,
+    ],
   );
-  const [cargos, setCargos] = useState<CargoEditInput[]>(() => mapInitialCargos(initialCargos));
+
+  const [title, setTitle] = useState(published.title);
+  const [submissionPeriodDays, setSubmissionPeriodDays] = useState(published.submissionPeriodDays);
+  const [defaultCorrectionQuota, setDefaultCorrectionQuota] = useState(
+    published.defaultCorrectionQuota,
+  );
+  const [cargos, setCargos] = useState<CargoEditInput[]>(published.cargos);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(adminDraft?.updatedAt ?? null);
+  const draftRevisionMismatch =
+    Boolean(adminDraft?.structure) &&
+    adminDraft?.publishedRevision !== publishedRevision;
+  const hydratedRef = useRef(false);
+  const lastSeenRevisionRef = useRef(publishedRevision);
+
+  const currentSnapshot = useMemo(
+    (): EditalEditFormSnapshot => ({
+      title,
+      submissionPeriodDays,
+      defaultCorrectionQuota,
+      cargos,
+    }),
+    [title, submissionPeriodDays, defaultCorrectionQuota, cargos],
+  );
+
+  const hasUnpublishedChanges = hasEditalEditDraftChanges(published, currentSnapshot);
+
+  const resetToPublished = useCallback(() => {
+    setTitle(published.title);
+    setSubmissionPeriodDays(published.submissionPeriodDays);
+    setDefaultCorrectionQuota(published.defaultCorrectionQuota);
+    setCargos(published.cargos);
+    setDraftSavedAt(null);
+    setError("");
+    setMessage("");
+    void clearEditalAdminDraftSectionClient(editalId, "structure");
+  }, [editalId, published]);
+
+  const draftPatch = useMemo(
+    () => ({ structure: hasUnpublishedChanges ? currentSnapshot : null }),
+    [currentSnapshot, hasUnpublishedChanges],
+  );
+
+  useEditalAdminDraftSync({
+    editalId,
+    publishedRevision,
+    enabled: hasUnpublishedChanges,
+    patch: draftPatch,
+  });
+
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+
+    void migrateLocalEditalDraftToServer(editalId, publishedRevision);
+
+    const structure = adminDraft?.structure;
+    if (!structure || !hasEditalEditDraftChanges(published, structure)) return;
+
+    const applied = applySnapshot(structure);
+    setTitle(applied.title);
+    setSubmissionPeriodDays(applied.submissionPeriodDays);
+    setDefaultCorrectionQuota(applied.defaultCorrectionQuota);
+    setCargos(applied.cargos);
+    setDraftSavedAt(adminDraft?.updatedAt ?? null);
+  }, [adminDraft?.structure, adminDraft?.updatedAt, editalId, published, publishedRevision]);
+
+  useEffect(() => {
+    if (lastSeenRevisionRef.current === publishedRevision) return;
+    lastSeenRevisionRef.current = publishedRevision;
+
+    if (draftRevisionMismatch) return;
+
+    const applied = applySnapshot(published);
+    setTitle(applied.title);
+    setSubmissionPeriodDays(applied.submissionPeriodDays);
+    setDefaultCorrectionQuota(applied.defaultCorrectionQuota);
+    setCargos(applied.cargos);
+  }, [draftRevisionMismatch, published, publishedRevision]);
+
+  useEffect(() => {
+    if (!hasUnpublishedChanges) return;
+
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnpublishedChanges]);
 
   function updateCargo(index: number, cargo: CargoEditInput) {
     setCargos((current) => current.map((item, i) => (i === index ? cargo : item)));
+  }
+
+  function discardDraft() {
+    const ok = window.confirm(
+      "Descartar o rascunho e voltar à versão publicada? As alterações não salvas serão perdidas.",
+    );
+    if (!ok) return;
+    resetToPublished();
+    setMessage("Rascunho descartado. Você está vendo a versão publicada.");
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -131,7 +277,8 @@ export function EditEditalForm({
         return;
       }
 
-      setMessage(result.message ?? "Edital atualizado com sucesso.");
+      setDraftSavedAt(null);
+      setMessage(result.message ?? "Alterações publicadas. Membros já veem esta versão.");
       router.refresh();
     } catch {
       setError(
@@ -147,10 +294,21 @@ export function EditEditalForm({
       <div>
         <h2 className="panel-title">Editar edital</h2>
         <p className="mt-1 text-sm text-muted">
-          Altere título, cargos e temas a qualquer momento. Remover cargo ou tema com envios não é
-          permitido.
+          Membros só veem alterações depois de <strong className="font-medium text-foreground">Salvar e publicar</strong>.
+          O rascunho é salvo automaticamente no servidor (outro dispositivo continua de onde parou).
         </p>
       </div>
+
+      {hasUnpublishedChanges ? (
+        <EditalDraftStatusBanner
+          draftUpdatedAt={draftSavedAt}
+          publishedRevisionMismatch={draftRevisionMismatch}
+        />
+      ) : (
+        <p role="status" className="text-sm text-muted">
+          Nenhuma alteração pendente — alunos veem a versão publicada atual.
+        </p>
+      )}
 
       <label className="flex flex-col gap-2 text-sm font-medium">
         Título do edital
@@ -315,9 +473,19 @@ export function EditEditalForm({
       {error ? <p className="alert-error">{error}</p> : null}
       {message ? <p className="alert-success">{message}</p> : null}
 
-      <button type="submit" disabled={pending} className="btn-primary w-fit">
-        {pending ? "Salvando..." : "Salvar alterações"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" disabled={pending || !hasUnpublishedChanges} className="btn-primary">
+          {pending ? "Publicando..." : "Salvar e publicar"}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={pending || !hasUnpublishedChanges}
+          onClick={discardDraft}
+        >
+          Cancelar alterações
+        </button>
+      </div>
     </form>
   );
 }

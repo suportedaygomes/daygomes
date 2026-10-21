@@ -106,6 +106,7 @@ export async function POST(request: Request, context: RouteContext) {
       mime_type: file.type || null,
       file_size: file.size,
       sort_order: count ?? 0,
+      is_published: false,
     })
     .select("id, title")
     .single();

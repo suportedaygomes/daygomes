@@ -10,6 +10,7 @@ export type EditalAttachmentRow = {
   mime_type: string | null;
   file_size: number;
   sort_order: number;
+  is_published: boolean;
   created_at: string;
 };
 
@@ -20,6 +21,7 @@ export type EditalAttachmentView = {
   originalFilename: string;
   fileSize: number;
   mimeType: string | null;
+  isPublished: boolean;
 };
 
 export function mapEditalAttachment(row: EditalAttachmentRow): EditalAttachmentView {
@@ -30,6 +32,7 @@ export function mapEditalAttachment(row: EditalAttachmentRow): EditalAttachmentV
     originalFilename: row.original_filename,
     fileSize: row.file_size,
     mimeType: row.mime_type,
+    isPublished: row.is_published ?? true,
   };
 }
 

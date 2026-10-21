@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminApiClientOrError } from "@/lib/admin/create-admin-api-client";
 import { verifyAdminApi } from "@/lib/admin/verify-admin-api";
 import type { EditalEvaluationRubric } from "@/lib/editais/evaluation-rubric";
+import { clearEditalAdminDraftSection } from "@/lib/editais/edital-admin-draft-server";
 import { updateEditalEvaluationRubricCore } from "@/lib/editais/update-evaluation-rubric-core";
 
 type RouteContext = { params: Promise<{ editalId: string }> };
@@ -35,6 +36,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!result.ok) {
       return NextResponse.json(result, { status: 400 });
     }
+
+    await clearEditalAdminDraftSection(adminResult.admin, editalId, "evaluationRubric");
 
     return NextResponse.json(result);
   } catch (error) {

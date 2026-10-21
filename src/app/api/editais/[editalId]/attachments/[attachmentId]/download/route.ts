@@ -40,10 +40,19 @@ export async function GET(_request: Request, context: RouteContext) {
   const admin = createAdminClient();
   const { data: attachment } = await admin
     .from("edital_attachments")
-    .select("storage_path, original_filename, mime_type")
+    .select("storage_path, original_filename, mime_type, is_published")
     .eq("id", attachmentId)
     .eq("edital_id", editalId)
     .maybeSingle();
+
+  if (
+    attachment &&
+    !attachment.is_published &&
+    profile.role !== "admin" &&
+    profile.role !== "corretor"
+  ) {
+    return NextResponse.json({ error: "Anexo não encontrado." }, { status: 404 });
+  }
 
   if (!attachment?.storage_path) {
     return NextResponse.json({ error: "Anexo não encontrado." }, { status: 404 });

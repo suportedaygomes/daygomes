@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import {
   type EditalAttachmentView,
   editalAttachmentDownloadPath,
@@ -24,7 +24,13 @@ export function EditalAttachmentsAdmin({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [publishPending, setPublishPending] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const unpublishedCount = useMemo(
+    () => initialAttachments.filter((item) => !item.isPublished).length,
+    [initialAttachments],
+  );
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,9 +63,35 @@ export function EditalAttachmentsAdmin({
     setTitle("");
     setDescription("");
     setFile(null);
-    setMessage("Anexo adicionado.");
+    setMessage("Anexo enviado como rascunho. Publique para os membros baixarem.");
     setPending(false);
     router.refresh();
+  }
+
+  async function onPublishDrafts() {
+    setError("");
+    setMessage("");
+    setPublishPending(true);
+
+    try {
+      const response = await fetch(`/api/admin/editais/${editalId}/attachments/publish`, {
+        method: "POST",
+      });
+      const result = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        message?: string;
+      } | null;
+      if (!response.ok || !result?.ok) {
+        setError(result?.message ?? "Não foi possível publicar os anexos.");
+        return;
+      }
+      setMessage(result.message ?? "Anexos publicados.");
+      router.refresh();
+    } catch {
+      setError("Não foi possível publicar os anexos. Tente novamente.");
+    } finally {
+      setPublishPending(false);
+    }
   }
 
   async function onRemove(attachmentId: string) {
@@ -88,9 +120,32 @@ export function EditalAttachmentsAdmin({
       <div>
         <h2 className="panel-title">Anexos do edital</h2>
         <p className="mt-1 text-sm text-muted">
-          Materiais para download dos membros e corretores (qualquer formato, até 25 MB por arquivo).
+          Novos arquivos ficam como <strong className="font-medium text-foreground">rascunho</strong>{" "}
+          até publicar. Membros só veem anexos publicados (qualquer formato, até 25 MB por arquivo).
         </p>
       </div>
+
+      {unpublishedCount > 0 ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100"
+        >
+          <p className="font-semibold text-amber-50">
+            {unpublishedCount} anexo(s) aguardando publicação
+          </p>
+          <p className="mt-1 text-amber-100/90">
+            Visíveis para você no painel; alunos ainda não baixam até publicar.
+          </p>
+          <button
+            type="button"
+            className="btn-primary btn-sm mt-3"
+            disabled={publishPending}
+            onClick={onPublishDrafts}
+          >
+            {publishPending ? "Publicando..." : "Publicar anexos pendentes"}
+          </button>
+        </div>
+      ) : null}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-xl border border-white/10 p-4">
         <label className="flex flex-col gap-2 text-sm font-medium">
@@ -122,7 +177,7 @@ export function EditalAttachmentsAdmin({
           />
         </label>
         <button type="submit" disabled={pending} className="btn-primary btn-sm w-fit">
-          {pending ? "Enviando..." : "Adicionar anexo"}
+          {pending ? "Enviando..." : "Adicionar anexo (rascunho)"}
         </button>
       </form>
 
@@ -134,7 +189,14 @@ export function EditalAttachmentsAdmin({
               className="flex flex-col gap-3 rounded-xl border border-white/10 p-4 sm:flex-row sm:items-start sm:justify-between"
             >
               <div className="min-w-0">
-                <p className="font-semibold">{item.title}</p>
+                <p className="font-semibold">
+                  {item.title}
+                  {!item.isPublished ? (
+                    <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-100">
+                      Rascunho
+                    </span>
+                  ) : null}
+                </p>
                 {item.description ? (
                   <p className="mt-1 text-sm text-muted">{item.description}</p>
                 ) : null}
@@ -162,7 +224,7 @@ export function EditalAttachmentsAdmin({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted">Nenhum anexo publicado ainda.</p>
+        <p className="text-sm text-muted">Nenhum anexo ainda.</p>
       )}
 
       {error ? <p className="alert-error text-sm">{error}</p> : null}
