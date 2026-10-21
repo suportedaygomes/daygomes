@@ -70,7 +70,7 @@ export function EvaluationRubricEditor({ value, onChange }: Props) {
             <p className="text-sm font-semibold text-purple">Quesito {quesitoIndex + 1}</p>
             <button
               type="button"
-              className="text-xs text-red-300"
+              className="text-action-danger text-xs"
               onClick={() =>
                 onChange({
                   ...value,
@@ -192,7 +192,7 @@ export function EvaluationRubricEditor({ value, onChange }: Props) {
                 </label>
                 <button
                   type="button"
-                  className="self-start text-xs text-red-300 sm:self-center"
+                  className="text-action-danger self-start text-xs sm:self-center"
                   onClick={() =>
                     updateQuesito(quesitoIndex, {
                       ...quesito,

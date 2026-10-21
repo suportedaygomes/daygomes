@@ -175,7 +175,7 @@ export function CreateEditalForm() {
             {cargos.length > 1 ? (
               <button
                 type="button"
-                className="text-sm text-red-300"
+                className="text-action-danger text-sm"
                 onClick={() => setCargos((current) => current.filter((_, i) => i !== cargoIndex))}
               >
                 Remover cargo
@@ -329,7 +329,7 @@ export function CreateEditalForm() {
                 </span>
                 <button
                   type="button"
-                  className="text-xs text-red-300"
+                  className="text-action-danger text-xs"
                   onClick={() =>
                     setAttachmentDrafts((current) => current.filter((_, i) => i !== index))
                   }

@@ -216,18 +216,6 @@ export function EditEditalForm({
     setCargos(applied.cargos);
   }, [draftRevisionMismatch, published, publishedRevision]);
 
-  useEffect(() => {
-    if (!hasUnpublishedChanges) return;
-
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-      event.returnValue = "";
-    }
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [hasUnpublishedChanges]);
-
   function updateCargo(index: number, cargo: CargoEditInput) {
     setCargos((current) => current.map((item, i) => (i === index ? cargo : item)));
   }
@@ -364,7 +352,7 @@ export function EditEditalForm({
             {cargos.length > 1 ? (
               <button
                 type="button"
-                className="text-sm text-red-300"
+                className="text-action-danger text-sm"
                 onClick={() => setCargos((current) => current.filter((_, i) => i !== cargoIndex))}
               >
                 Remover cargo

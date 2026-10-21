@@ -31,7 +31,7 @@ export function CargoActivityPhasesFields({ activityKind, phases, onChange }: Pr
             {phases.length > 1 ? (
               <button
                 type="button"
-                className="text-xs text-red-300"
+                className="text-action-danger text-xs"
                 onClick={() => onChange(phases.filter((_, i) => i !== phaseIndex))}
               >
                 Remover tema

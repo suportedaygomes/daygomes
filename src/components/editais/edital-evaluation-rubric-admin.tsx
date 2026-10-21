@@ -69,18 +69,6 @@ export function EditalEvaluationRubricAdmin({
     }
   }, [adminDraft?.evaluationRubric, adminDraft?.updatedAt, published]);
 
-  useEffect(() => {
-    if (!hasUnpublishedChanges) return;
-
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-      event.returnValue = "";
-    }
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [hasUnpublishedChanges]);
-
   const resetToPublished = useCallback(() => {
     setRubric(published);
     setDraftSavedAt(null);

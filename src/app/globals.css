@@ -456,6 +456,25 @@ html:not([data-theme="light"]) .draft-badge {
   color: #fef3c7;
 }
 
+.text-action-danger {
+  color: #b91c1c;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.text-action-danger:hover {
+  color: #991b1b;
+  text-decoration: underline;
+}
+
+html:not([data-theme="light"]) .text-action-danger {
+  color: #fca5a5;
+}
+
+html:not([data-theme="light"]) .text-action-danger:hover {
+  color: #fecaca;
+}
+
 .alert-error {
   border-radius: 1rem;
   border: 1px solid var(--alert-error-border);
@@ -520,12 +539,41 @@ html:not([data-theme="light"]) .draft-badge {
   }
 }
 
+.phase-description-prose p,
+.phase-description-prose div {
+  text-align: left;
+}
+
+.phase-description-prose p[align="center"],
+.phase-description-prose div[align="center"],
+.phase-description-prose li[align="center"] {
+  text-align: center;
+}
+
+.phase-description-prose p[align="right"],
+.phase-description-prose div[align="right"],
+.phase-description-prose li[align="right"] {
+  text-align: right;
+}
+
+.phase-description-prose p[align="justify"],
+.phase-description-prose div[align="justify"],
+.phase-description-prose li[align="justify"] {
+  text-align: justify;
+}
+
 .phase-description-prose p {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.4rem;
 }
 
 .phase-description-prose p:last-child {
   margin-bottom: 0;
+}
+
+.phase-description-prose p:empty {
+  display: none;
+  margin: 0;
+  min-height: 0;
 }
 
 .phase-description-prose ul,
@@ -550,16 +598,52 @@ html:not([data-theme="light"]) .draft-badge {
   margin: 0.25rem 0;
 }
 
+.phase-description-prose .phase-text-align-left,
+.phase-description-prose .phase-text-align-center,
+.phase-description-prose .phase-text-align-right {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.phase-description-prose .phase-text-align-left {
+  text-align: left;
+}
+
+.phase-description-prose .phase-text-align-center {
+  text-align: center;
+}
+
+.phase-description-prose .phase-text-align-right {
+  text-align: right;
+}
+
 .phase-description-prose strong,
 .phase-description-prose b {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--foreground);
+}
+
+html[data-theme="light"] .phase-description-prose strong,
+html[data-theme="light"] .phase-description-prose b {
+  color: #0a0a0e;
+}
+
+.phase-description-prose em,
+.phase-description-prose i {
+  font-style: italic;
+}
+
+.phase-description-prose u {
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
 }
 
 .phase-description-editor {
   width: 100%;
   height: auto;
   min-height: 8rem;
+  font-weight: 400;
   word-break: break-word;
   overflow-wrap: anywhere;
 }

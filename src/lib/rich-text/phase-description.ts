@@ -24,7 +24,7 @@ const ALLOWED_TAGS = [
 
 const PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   ALLOWED_TAGS,
-  ALLOWED_ATTR: ["style", "type", "class"],
+  ALLOWED_ATTR: ["style", "type", "class", "align"],
 };
 
 let hooksRegistered = false;
@@ -33,20 +33,43 @@ function ensureSanitizeHooks() {
   if (hooksRegistered) return;
   hooksRegistered = true;
   DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
+    if (data.attrName === "align") {
+      const align = (data.attrValue ?? "").toLowerCase();
+      if (!["left", "center", "right", "justify"].includes(align)) {
+        data.keepAttr = false;
+      }
+      return;
+    }
+
+    if (data.attrName === "class") {
+      const allowed = (data.attrValue ?? "")
+        .split(/\s+/)
+        .filter((token) => /^phase-text-align-(left|center|right)$/.test(token));
+      if (!allowed.length) {
+        data.keepAttr = false;
+        return;
+      }
+      data.attrValue = allowed.join(" ");
+      return;
+    }
+
     if (data.attrName !== "style") return;
     const value = data.attrValue ?? "";
     const parts = value
       .split(";")
       .map((part) => part.trim())
       .filter(Boolean);
-    const safe = parts.every(
+    const safeParts = parts.filter(
       (part) =>
         /^text-align:\s*(left|center|right|justify)$/i.test(part) ||
-        /^white-space:\s*pre-wrap$/i.test(part),
+        /^white-space:\s*pre-wrap$/i.test(part) ||
+        /^font-weight:\s*(bold|[5-9]00)$/i.test(part),
     );
-    if (!safe) {
+    if (!safeParts.length) {
       data.keepAttr = false;
+      return;
     }
+    data.attrValue = safeParts.join("; ");
   });
 }
 

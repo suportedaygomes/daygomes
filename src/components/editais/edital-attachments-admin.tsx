@@ -208,7 +208,7 @@ export function EditalAttachmentsAdmin({
                 </a>
                 <button
                   type="button"
-                  className="btn-secondary btn-sm text-red-300"
+                  className="btn-secondary btn-sm text-action-danger"
                   disabled={removingId === item.id}
                   onClick={() => onRemove(item.id)}
                 >
