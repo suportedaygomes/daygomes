@@ -1,6 +1,10 @@
 import { escapeHtml } from "@/lib/email/escape-html";
 import { sendEmail, type SendResult } from "@/lib/email/resend";
-import { buildTransactionalEmail, EMAIL_STRONG_COLOR } from "@/lib/email/transactional-layout";
+import {
+  buildTransactionalEmail,
+  EMAIL_STRONG_COLOR,
+  transactionalEmailAlertBox,
+} from "@/lib/email/transactional-layout";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
 type SendAccessEmailInput = {
@@ -36,7 +40,16 @@ export async function sendAccessEmail(input: SendAccessEmailInput): Promise<Send
        <p style="margin:0 0 12px;">Recomendamos alterar a senha em <em>Meu perfil</em> após o primeiro acesso.</p>`
     : `<p style="margin:0 0 12px;">Use o mesmo e-mail e senha que você já utiliza na plataforma.</p>`;
 
+  const platformNotice = isNewAccount
+    ? transactionalEmailAlertBox(
+        "Leia antes de entrar: onde ficam as aulas e onde enviar a redação",
+        `<p style="margin:0 0 10px;"><strong style="color:${EMAIL_STRONG_COLOR};">Este site (daygomes.com.br) NÃO é o portal de videoaulas.</strong> Ele serve <strong style="color:${EMAIL_STRONG_COLOR};">apenas</strong> para você <strong style="color:${EMAIL_STRONG_COLOR};">enviar suas redações</strong> e receber as <strong style="color:${EMAIL_STRONG_COLOR};">correções</strong> da equipe da Professora Day.</p>
+         <p style="margin:0;"><strong style="color:${EMAIL_STRONG_COLOR};">Todos os vídeos, módulos e materiais em vídeo do curso</strong> estão na <strong style="color:${EMAIL_STRONG_COLOR};">Kiwify</strong> — na área de membros da sua compra. Assista às aulas pela Kiwify; use este login somente para mandar textos e ver o feedback das correções.</p>`,
+      )
+    : "";
+
   const bodyHtml = `
+      ${platformNotice}
       <p style="margin:0 0 12px;">${greeting},</p>
       <p style="margin:0 0 12px;">${intro}</p>
       ${productLine}

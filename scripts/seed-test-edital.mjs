@@ -198,28 +198,21 @@ if (enrollError) {
 
 const enrollmentId = enrollment?.id;
 if (enrollmentId) {
-  const { data: phase1 } = await admin
+  const { data: phases } = await admin
     .from("edital_phases")
     .select("id")
-    .eq("cargo_id", enrollCargo.id)
-    .eq("phase_number", 1)
-    .maybeSingle();
+    .eq("cargo_id", enrollCargo.id);
 
-  if (phase1) {
-    const { data: accessExists } = await admin
-      .from("member_phase_access")
-      .select("id")
-      .eq("enrollment_id", enrollmentId)
-      .eq("phase_id", phase1.id)
-      .maybeSingle();
-
-    if (!accessExists) {
-      await admin.from("member_phase_access").insert({
+  const unlockedAt = new Date().toISOString();
+  for (const phase of phases ?? []) {
+    await admin.from("member_phase_access").upsert(
+      {
         enrollment_id: enrollmentId,
-        phase_id: phase1.id,
-        unlocked_at: new Date().toISOString(),
-      });
-    }
+        phase_id: phase.id,
+        unlocked_at: unlockedAt,
+      },
+      { onConflict: "enrollment_id,phase_id", ignoreDuplicates: true },
+    );
   }
 }
 

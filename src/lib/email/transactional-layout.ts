@@ -105,6 +105,18 @@ export function transactionalQuoteBlock(text: string): string {
   return `<p style="margin:16px 0;padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:${EMAIL_TEXT};background-color:#f0eeea;border:1px solid ${EMAIL_BORDER};border-radius:10px;">${escapeHtml(text)}</p>`;
 }
 
+/** Caixa de aviso no topo do e-mail (HTML interno já escapado onde necessário). */
+export function transactionalEmailAlertBox(heading: string, innerHtml: string): string {
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 20px;">
+    <tr>
+      <td style="padding:16px 18px;background-color:#f3e8ff;border:2px solid ${EMAIL_PURPLE};border-radius:12px;">
+        <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.4;font-weight:700;color:${EMAIL_TEXT};">${escapeHtml(heading)}</p>
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:${EMAIL_TEXT};">${innerHtml}</div>
+      </td>
+    </tr>
+  </table>`;
+}
+
 type BuildTransactionalEmailInput = {
   eyebrow: string;
   title: string;

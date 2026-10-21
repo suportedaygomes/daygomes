@@ -1,3 +1,4 @@
+import type { ActivityKind } from "@/lib/editais/activity-kind";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type SubmissionRef = {
@@ -9,12 +10,14 @@ export async function unlockFirstPhaseForEnrollment(
   client: SupabaseClient,
   enrollmentId: string,
   cargoId: string,
+  activityKind: ActivityKind,
   unlockedBy?: string | null,
 ) {
   const { data: phase1 } = await client
     .from("edital_phases")
     .select("id")
     .eq("cargo_id", cargoId)
+    .eq("activity_kind", activityKind)
     .eq("phase_number", 1)
     .maybeSingle();
 
@@ -37,7 +40,7 @@ export async function findImmediateNextPhaseId(
 ): Promise<string | null> {
   const { data: currentPhase } = await client
     .from("edital_phases")
-    .select("cargo_id, phase_number")
+    .select("cargo_id, activity_kind, phase_number")
     .eq("id", phaseId)
     .maybeSingle();
 
@@ -47,6 +50,7 @@ export async function findImmediateNextPhaseId(
     .from("edital_phases")
     .select("id")
     .eq("cargo_id", currentPhase.cargo_id)
+    .eq("activity_kind", currentPhase.activity_kind)
     .eq("phase_number", currentPhase.phase_number + 1)
     .maybeSingle();
 

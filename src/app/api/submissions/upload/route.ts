@@ -49,7 +49,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Inscrição inválida." }, { status: 403 });
   }
 
-  const { data: phase } = await supabase
+  const admin = createAdminClient();
+
+  const { data: phase } = await admin
     .from("edital_phases")
     .select("id, deadline_at, cargo_id, activity_kind, phase_number, edital_cargos(edital_id)")
     .eq("id", phaseId)
@@ -66,8 +68,6 @@ export async function POST(request: Request) {
   if (!cargo || cargo.edital_id !== enrollment.edital_id) {
     return NextResponse.json({ error: "Este tema não pertence à sua mentoria." }, { status: 403 });
   }
-
-  const admin = createAdminClient();
   const { count: phasesInTrack } = await admin
     .from("edital_phases")
     .select("*", { count: "exact", head: true })

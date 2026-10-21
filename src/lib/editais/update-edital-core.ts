@@ -5,6 +5,7 @@ import { validateEditCargo } from "@/lib/editais/cargo-phases";
 import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
 import type { CargoEditInput, UpdateEditalInput } from "@/lib/editais/types";
+import { syncMemberPhaseAccessForEdital } from "@/lib/editais/sync-member-phase-access";
 import { sanitizePhaseDescriptionHtmlServer } from "@/lib/rich-text/sanitize-phase-description-server";
 import type { createAdminClient } from "@/lib/supabase/admin";
 
@@ -265,6 +266,8 @@ export async function updateEditalCore(
       }
     }
   }
+
+  await syncMemberPhaseAccessForEdital(admin, input.editalId);
 
   return { ok: true, message: "Edital atualizado com sucesso." };
   } catch (error) {

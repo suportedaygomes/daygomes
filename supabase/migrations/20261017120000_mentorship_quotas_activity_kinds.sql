@@ -13,6 +13,9 @@ alter table public.edital_phases
   add constraint edital_phases_activity_kind_check
   check (activity_kind in ('dissertativa', 'estudo_caso'));
 
+alter table public.edital_phases
+  drop constraint if exists edital_phases_cargo_id_phase_number_key;
+
 create unique index if not exists edital_phases_cargo_kind_phase_idx
   on public.edital_phases (cargo_id, activity_kind, phase_number);
 

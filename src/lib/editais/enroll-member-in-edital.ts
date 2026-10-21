@@ -1,6 +1,7 @@
 import "server-only";
 
 import { normalizeAdminEnrollmentQuota } from "@/lib/editais/enrollment-quota";
+import { syncMemberPhaseAccessForEnrollment } from "@/lib/editais/sync-member-phase-access";
 import type { createAdminClient } from "@/lib/supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -128,6 +129,8 @@ export async function enrollMemberInEditalCore(
       return { ok: false, message: enrollmentWriteErrorMessage(error) };
     }
 
+    await syncMemberPhaseAccessForEnrollment(admin, existing.id);
+
     return {
       ok: true,
       message: "Membro já estava na mentoria. A cota de correções foi atualizada.",
@@ -157,6 +160,11 @@ export async function enrollMemberInEditalCore(
   if (insertError) {
     console.error("[enrollMemberInEdital] insert failed", insertError.code, insertError.message);
     return { ok: false, message: enrollmentWriteErrorMessage(insertError) };
+  }
+
+  const { data: created } = await findExistingEnrollment(admin, memberId, editalId);
+  if (created) {
+    await syncMemberPhaseAccessForEnrollment(admin, created.id);
   }
 
   return { ok: true, message: "Membro vinculado à mentoria." };

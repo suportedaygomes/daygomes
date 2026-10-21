@@ -4,6 +4,7 @@ import { resolveOrCreateMemberProfile } from "@/lib/kiwify/resolve-member-profil
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
+import { syncMemberPhaseAccessForEnrollment } from "@/lib/editais/sync-member-phase-access";
 import { mergeKiwifyEnrollmentQuota } from "@/lib/kiwify/merge-enrollment-quota";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -140,6 +141,10 @@ export async function provisionKiwifyOrder(
     }
 
     enrollmentId = enrollment.id;
+  }
+
+  if (enrollmentId) {
+    await syncMemberPhaseAccessForEnrollment(admin, enrollmentId);
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
