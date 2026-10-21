@@ -162,7 +162,7 @@ export async function enrollMemberInEditalCore(
     return { ok: false, message: enrollmentWriteErrorMessage(insertError) };
   }
 
-  const { data: created } = await findExistingEnrollment(admin, memberId, editalId);
+  const { existing: created } = await findExistingEnrollment(admin, memberId, editalId);
   if (created) {
     await syncMemberPhaseAccessForEnrollment(admin, created.id);
   }
