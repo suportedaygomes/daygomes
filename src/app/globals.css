@@ -438,6 +438,24 @@ html:not([data-theme="light"]) .alert-warning a {
   color: #ffffff;
 }
 
+.draft-badge {
+  display: inline-block;
+  border-radius: 9999px;
+  border: 1px solid #f59e0b;
+  background: #fef3c7;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #78350f;
+}
+
+html:not([data-theme="light"]) .draft-badge {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(245, 158, 11, 0.2);
+  color: #fef3c7;
+}
+
 .alert-error {
   border-radius: 1rem;
   border: 1px solid var(--alert-error-border);

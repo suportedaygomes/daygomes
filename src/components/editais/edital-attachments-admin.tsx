@@ -126,14 +126,11 @@ export function EditalAttachmentsAdmin({
       </div>
 
       {unpublishedCount > 0 ? (
-        <div
-          role="status"
-          className="rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-100"
-        >
-          <p className="font-semibold text-amber-50">
+        <div role="status" className="alert-warning">
+          <p className="font-semibold">
             {unpublishedCount} anexo(s) aguardando publicação
           </p>
-          <p className="mt-1 text-amber-100/90">
+          <p className="mt-1">
             Visíveis para você no painel; alunos ainda não baixam até publicar.
           </p>
           <button
@@ -192,9 +189,7 @@ export function EditalAttachmentsAdmin({
                 <p className="font-semibold">
                   {item.title}
                   {!item.isPublished ? (
-                    <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-100">
-                      Rascunho
-                    </span>
+                    <span className="draft-badge ml-2">Rascunho</span>
                   ) : null}
                 </p>
                 {item.description ? (
