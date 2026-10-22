@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { saveCorrection } from "@/app/actions/corrections";
+import { releaseCorrectionToQueue, saveCorrection } from "@/app/actions/corrections";
 import { CorrectionRubricPanel } from "@/components/editais/correction-rubric-panel";
 import type { EditalEvaluationRubric, RubricScores } from "@/lib/editais/evaluation-rubric";
 
@@ -13,6 +14,7 @@ type CorrectionFormProps = {
   memberName: string;
   phaseTitle: string;
   downloadUrl: string | null;
+  canReleaseToQueue?: boolean;
   evaluationRubric?: EditalEvaluationRubric | null;
   initial?: {
     grade: number | null;
@@ -33,9 +35,11 @@ export function CorrectionForm({
   memberName,
   phaseTitle,
   downloadUrl,
+  canReleaseToQueue = false,
   evaluationRubric,
   initial,
 }: CorrectionFormProps) {
+  const router = useRouter();
   const hasRubric = Boolean(evaluationRubric?.quesitos.length);
 
   const [grade, setGrade] = useState(initial?.grade?.toString() ?? "");
@@ -50,6 +54,33 @@ export function CorrectionForm({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [releasePending, setReleasePending] = useState(false);
+
+  async function onReleaseToQueue() {
+    if (
+      !window.confirm(
+        "Devolver esta atividade à fila? Outro corretor (ou você depois) poderá pegá-la de novo.",
+      )
+    ) {
+      return;
+    }
+    setError("");
+    setMessage("");
+    setReleasePending(true);
+    try {
+      const result = await releaseCorrectionToQueue(submissionId);
+      if (!result.ok) {
+        setError(result.message);
+      } else {
+        router.push("/painel/correcoes");
+        router.refresh();
+      }
+    } catch {
+      setError("Não foi possível devolver à fila. Verifique a conexão e tente novamente.");
+    } finally {
+      setReleasePending(false);
+    }
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,6 +127,16 @@ export function CorrectionForm({
           <a href={downloadUrl} target="_blank" rel="noreferrer" className="btn-secondary w-fit">
             Baixar arquivo original
           </a>
+        ) : null}
+        {canReleaseToQueue ? (
+          <button
+            type="button"
+            className="btn-secondary w-fit"
+            disabled={pending || releasePending}
+            onClick={onReleaseToQueue}
+          >
+            {releasePending ? "Devolvendo..." : "Devolver à fila"}
+          </button>
         ) : null}
       </div>
 

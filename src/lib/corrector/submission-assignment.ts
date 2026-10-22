@@ -108,3 +108,55 @@ export async function claimSubmissionForCorrector(
 
   return { ok: true, submission };
 }
+
+export type ReleaseSubmissionResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+/** Devolve à fila (sem corretor atribuído). Admin pode liberar qualquer uma; corretor só a sua. */
+export async function releaseSubmissionToQueue(
+  submissionId: string,
+  actorId: string,
+  role: UserRole,
+): Promise<ReleaseSubmissionResult> {
+  const admin = createAdminClient();
+  const { data: submission } = await admin
+    .from("phase_submissions")
+    .select("id, status, assigned_corrector_id")
+    .eq("id", submissionId)
+    .maybeSingle();
+
+  if (!submission) {
+    return { ok: false, message: "Envio não encontrado." };
+  }
+
+  if (!isPendingCorrectionStatus(submission.status)) {
+    return { ok: false, message: "Só é possível devolver envios ainda não corrigidos." };
+  }
+
+  if (role !== "admin" && submission.assigned_corrector_id !== actorId) {
+    return {
+      ok: false,
+      message: "Esta atividade está com outro corretor. Apenas admin pode retirar da fila dele.",
+    };
+  }
+
+  if (submission.status === "enviado" && !submission.assigned_corrector_id) {
+    return { ok: false, message: "Esta atividade já está na fila geral." };
+  }
+
+  const { error } = await admin
+    .from("phase_submissions")
+    .update({
+      assigned_corrector_id: null,
+      status: "enviado",
+    })
+    .eq("id", submissionId)
+    .in("status", ["enviado", "em_correcao"]);
+
+  if (error) {
+    return { ok: false, message: "Não foi possível devolver à fila." };
+  }
+
+  return { ok: true };
+}

@@ -95,6 +95,12 @@ export default async function CorrecaoDetailPage({
   const editalId = await resolveEditalIdForSubmission(id);
   const editalAttachments = editalId ? await listEditalAttachments(editalId) : [];
 
+  const sub = access.submission;
+  const canReleaseToQueue =
+    (sub.status === "enviado" || sub.status === "em_correcao") &&
+    Boolean(sub.assigned_corrector_id) &&
+    (profile.role === "admin" || sub.assigned_corrector_id === profile.id);
+
   return (
     <PainelPage>
       <h1 className="text-3xl font-semibold tracking-tight">Corrigir envio</h1>
@@ -114,6 +120,7 @@ export default async function CorrecaoDetailPage({
           memberName={member?.full_name ?? "Aluno"}
           phaseTitle={phase?.title ?? "Tema"}
           downloadUrl={`/api/submissions/${id}/download`}
+          canReleaseToQueue={canReleaseToQueue}
           evaluationRubric={evaluationRubric}
           initial={
             correction

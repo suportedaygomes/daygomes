@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { claimSubmissionForCorrector } from "@/lib/corrector/submission-assignment";
+import {
+  claimSubmissionForCorrector,
+  releaseSubmissionToQueue,
+} from "@/lib/corrector/submission-assignment";
 import { sendCorrectionNoticeEmail } from "@/lib/email/send-correction-notice-email";
 import {
   buildRubricFeedbackSummary,
@@ -200,4 +203,29 @@ export async function saveCorrection(input: {
         ? "Correção salva. O aluno foi avisado por e-mail."
         : "Correção salva.",
   };
+}
+
+export async function releaseCorrectionToQueue(submissionId: string) {
+  const { user, profile } = await getCurrentProfile();
+
+  if (!user || !profile || profile.banned) {
+    return { ok: false, message: "Sessão inválida." };
+  }
+
+  if (profile.role !== "corretor" && profile.role !== "admin") {
+    return { ok: false, message: "Acesso negado." };
+  }
+
+  const result = await releaseSubmissionToQueue(
+    submissionId,
+    user.id,
+    profile.role,
+  );
+
+  if (result.ok) {
+    revalidatePath("/painel/correcoes");
+    revalidatePath(`/painel/correcoes/${submissionId}`);
+  }
+
+  return result;
 }
