@@ -1,5 +1,8 @@
 import type { ProfileRow } from "@/lib/auth/profile";
-import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
+import {
+  submissionAssignedCorrectorEmbed,
+  submissionMemberProfileEmbed,
+} from "@/lib/corrector/submission-select";
 import { unwrapSingle } from "@/lib/corrector/submission-row-utils";
 import { activityKindShortLabel, cargoDisplayName } from "@/lib/editais/activity-kind";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
@@ -10,6 +13,7 @@ export type PendingSubmissionListRow = {
   member_id: string;
   status: string;
   assigned_corrector_id: string | null;
+  assignedCorrectorName: string | null;
   submitted_at: string;
   memberName: string;
   editalId: string;
@@ -22,25 +26,14 @@ export type PendingSubmissionListRow = {
   isResubmit: boolean;
 };
 
-function correctorSeesInQueue(
-  row: { status: string; assigned_corrector_id: string | null },
-  correctorId: string,
-) {
-  if (row.status !== "enviado" && row.status !== "em_correcao") return false;
-  if (!row.assigned_corrector_id) {
-    return row.status === "enviado";
-  }
-  return row.assigned_corrector_id === correctorId;
-}
-
 export async function listPendingSubmissionsForStaff(
-  profile: Pick<ProfileRow, "id" | "role">,
+  _profile: Pick<ProfileRow, "id" | "role">,
 ): Promise<PendingSubmissionListRow[]> {
   const admin = createAdminClient();
   const { data: rows, error } = await admin
     .from("phase_submissions")
     .select(
-      `id, member_id, status, assigned_corrector_id, submitted_at, ${submissionMemberProfileEmbed}, edital_phases(title, phase_number, deadline_at, activity_kind, edital_cargos(id, name, edital_id, editais(title))), member_edital_enrollments!phase_submissions_enrollment_id_fkey(edital_id)`,
+      `id, member_id, status, assigned_corrector_id, submitted_at, ${submissionMemberProfileEmbed}, ${submissionAssignedCorrectorEmbed}, edital_phases(title, phase_number, deadline_at, activity_kind, edital_cargos(id, name, edital_id, editais(title))), member_edital_enrollments!phase_submissions_enrollment_id_fkey(edital_id)`,
     )
     .in("status", ["enviado", "em_correcao"])
     .order("submitted_at", { ascending: true });
@@ -49,10 +42,7 @@ export async function listPendingSubmissionsForStaff(
     throw new Error(`Fila de correções: ${error.message}`);
   }
 
-  const visible =
-    profile.role === "admin"
-      ? rows ?? []
-      : (rows ?? []).filter((row) => correctorSeesInQueue(row, profile.id));
+  const visible = rows ?? [];
 
   const ids = visible.map((row) => row.id);
   const resubmitIds = new Set<string>();
@@ -68,6 +58,10 @@ export async function listPendingSubmissionsForStaff(
 
   return visible.map((row) => {
     const member = unwrapSingle(row.profiles);
+    const assignedCorrector = unwrapSingle(
+      (row as { assigned_corrector?: { full_name: string | null } | { full_name: string | null }[] })
+        .assigned_corrector,
+    );
     const phase = unwrapSingle(row.edital_phases);
     const enrollment = unwrapSingle(row.member_edital_enrollments);
     const cargo = phase ? unwrapSingle(phase.edital_cargos) : null;
@@ -82,6 +76,7 @@ export async function listPendingSubmissionsForStaff(
       member_id: row.member_id,
       status: row.status,
       assigned_corrector_id: row.assigned_corrector_id,
+      assignedCorrectorName: assignedCorrector?.full_name ?? null,
       submitted_at: row.submitted_at,
       memberName: member?.full_name ?? "Aluno",
       editalId: enrollment?.edital_id ?? cargo?.edital_id ?? "",

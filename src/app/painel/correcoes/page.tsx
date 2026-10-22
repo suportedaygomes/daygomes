@@ -21,8 +21,8 @@ export default async function CorrecoesPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Correções</h1>
           <p className="mt-2 text-muted">
-            Fila pendente. Filtre por edital, cargo e tipo de envio. Ao abrir, a atividade fica
-            reservada para você.
+            Todas as correções pendentes ficam visíveis na fila. Ao abrir uma livre, ela fica
+            reservada para você; use &quot;Devolver à fila&quot; para liberar.
           </p>
         </div>
         <Link

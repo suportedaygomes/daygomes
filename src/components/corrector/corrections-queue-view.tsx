@@ -7,6 +7,7 @@ import {
   buildEditalQueueSummaries,
   filterPendingSubmissions,
   type CorrectorQueueFilters,
+  type QueueAssignmentFilter,
 } from "@/lib/corrector/queue-summaries";
 import { themeLabel } from "@/lib/editais/theme-label";
 
@@ -20,8 +21,16 @@ const defaultFilters: CorrectorQueueFilters = {
   editalId: "",
   cargoId: "",
   submissionKind: "all",
+  assignment: "all",
   memberQuery: "",
 };
+
+const assignmentOptions: { value: QueueAssignmentFilter; label: string }[] = [
+  { value: "all", label: "Todas" },
+  { value: "livre", label: "Ninguém pegou" },
+  { value: "comigo", label: "Com você" },
+  { value: "outros", label: "Com colega" },
+];
 
 function formatDeadline(iso: string | null) {
   if (!iso) return "—";
@@ -31,10 +40,40 @@ function formatDeadline(iso: string | null) {
   });
 }
 
+function QueueStatusBadge({
+  submission,
+  viewerId,
+}: {
+  submission: PendingSubmissionListRow;
+  viewerId: string;
+}) {
+  if (!submission.assigned_corrector_id) {
+    return (
+      <span className="rounded-full border border-white/15 px-2 py-0.5 text-xs font-medium text-muted">
+        Aguardando correção
+      </span>
+    );
+  }
+
+  if (submission.assigned_corrector_id === viewerId) {
+    return (
+      <span className="rounded-full bg-purple/20 px-2 py-0.5 text-xs font-medium text-purple">
+        Em correção · com você
+      </span>
+    );
+  }
+
+  const name = submission.assignedCorrectorName?.trim() || "outro corretor";
+  return (
+    <span className="rounded-full border border-purple/30 bg-white/5 px-2 py-0.5 text-xs font-medium text-beige">
+      Em correção · {name}
+    </span>
+  );
+}
+
 export function CorrectionsQueueView({
   submissions,
   viewerId,
-  viewerRole,
 }: CorrectionsQueueViewProps) {
   const [filters, setFilters] = useState<CorrectorQueueFilters>(defaultFilters);
 
@@ -62,8 +101,8 @@ export function CorrectionsQueueView({
   }, [submissions, filters.editalId]);
 
   const filtered = useMemo(
-    () => filterPendingSubmissions(submissions, filters),
-    [submissions, filters],
+    () => filterPendingSubmissions(submissions, filters, viewerId),
+    [submissions, filters, viewerId],
   );
 
   function setEditalId(editalId: string) {
@@ -82,14 +121,17 @@ export function CorrectionsQueueView({
     filters.editalId ||
     filters.cargoId ||
     filters.submissionKind !== "all" ||
+    filters.assignment !== "all" ||
     filters.memberQuery.trim();
+
+  const compactField = "field-input h-9 py-1.5 text-sm";
 
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold">Controle por edital</h2>
         <p className="text-sm text-muted">
-          Redações aguardando correção e prazo do tema mais próximo em cada edital.
+          Redações pendentes e prazo do tema mais próximo em cada edital.
         </p>
         <div className="grid gap-3 lg:grid-cols-2">
           {summaries.map((summary) => (
@@ -137,13 +179,41 @@ export function CorrectionsQueueView({
         </div>
       </section>
 
-      <section className="panel-card flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Filtros</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-2 text-sm font-medium">
+      <section className="panel-card flex flex-col gap-3 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium">Filtros</p>
+          <p className="text-xs text-muted">
+            <strong className="text-beige">{filtered.length}</strong> de {submissions.length}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {assignmentOptions.map((opt) => {
+            const active = filters.assignment === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                className={
+                  active
+                    ? "rounded-full bg-purple/25 px-3 py-1 text-xs font-semibold text-purple"
+                    : "rounded-full border border-white/12 px-3 py-1 text-xs font-medium text-muted transition hover:border-white/25 hover:text-foreground"
+                }
+                onClick={() =>
+                  setFilters((prev) => ({ ...prev, assignment: opt.value }))
+                }
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex min-w-[9rem] flex-1 flex-col gap-1 text-xs font-medium text-muted">
             Edital
             <select
-              className="field-input"
+              className={compactField}
               value={filters.editalId}
               onChange={(e) => setEditalId(e.target.value)}
             >
@@ -156,10 +226,10 @@ export function CorrectionsQueueView({
             </select>
           </label>
 
-          <label className="flex flex-col gap-2 text-sm font-medium">
+          <label className="flex min-w-[8rem] flex-1 flex-col gap-1 text-xs font-medium text-muted">
             Cargo
             <select
-              className="field-input"
+              className={compactField}
               value={filters.cargoId}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, cargoId: e.target.value }))
@@ -174,10 +244,10 @@ export function CorrectionsQueueView({
             </select>
           </label>
 
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Tipo de envio
+          <label className="flex min-w-[7rem] flex-col gap-1 text-xs font-medium text-muted">
+            Envio
             <select
-              className="field-input"
+              className={compactField}
               value={filters.submissionKind}
               onChange={(e) =>
                 setFilters((prev) => ({
@@ -187,52 +257,52 @@ export function CorrectionsQueueView({
               }
             >
               <option value="all">Todos</option>
-              <option value="primeiro">Primeiro envio</option>
+              <option value="primeiro">1º envio</option>
               <option value="reenvio">Reenvio</option>
             </select>
           </label>
 
-          <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2 lg:col-span-1">
-            Buscar aluno
+          <label className="flex min-w-[10rem] flex-[2] flex-col gap-1 text-xs font-medium text-muted">
+            Aluno
             <input
               type="search"
-              className="field-input"
-              placeholder="Nome do membro"
+              className={compactField}
+              placeholder="Buscar nome"
               value={filters.memberQuery}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, memberQuery: e.target.value }))
               }
             />
           </label>
+
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className="btn-secondary btn-sm h-9 shrink-0 px-3 text-xs"
+              onClick={clearFilters}
+            >
+              Limpar
+            </button>
+          ) : null}
         </div>
-
-        {hasActiveFilters ? (
-          <button
-            type="button"
-            className="btn-secondary btn-sm w-fit"
-            onClick={clearFilters}
-          >
-            Limpar filtros
-          </button>
-        ) : null}
-
-        <p className="text-sm text-muted">
-          Mostrando <strong className="text-beige">{filtered.length}</strong> de{" "}
-          {submissions.length} na fila
-        </p>
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {filtered.map((submission) => {
-          const isMine =
-            submission.assigned_corrector_id === viewerId ||
-            (viewerRole === "admin" && submission.status === "em_correcao");
+          const withOtherCorrector =
+            submission.assigned_corrector_id &&
+            submission.assigned_corrector_id !== viewerId;
 
           return (
             <article key={submission.id} className="panel-card flex flex-col gap-2">
               <Link
                 href={`/painel/correcoes/${submission.id}`}
-                className="transition hover:opacity-90"
+                className={`transition hover:opacity-90 ${withOtherCorrector ? "opacity-90" : ""}`}
+                title={
+                  withOtherCorrector
+                    ? "Atividade reservada para outro corretor — ao abrir, você verá aviso."
+                    : undefined
+                }
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold">{submission.memberName}</p>
@@ -243,15 +313,7 @@ export function CorrectionsQueueView({
                       1º envio
                     </span>
                   )}
-                  {submission.status === "em_correcao" && isMine ? (
-                    <span className="rounded-full bg-purple/20 px-2 py-0.5 text-xs font-medium text-purple">
-                      Com você
-                    </span>
-                  ) : submission.status === "enviado" && !submission.assigned_corrector_id ? (
-                    <span className="rounded-full border border-white/15 px-2 py-0.5 text-xs text-muted">
-                      Na fila
-                    </span>
-                  ) : null}
+                  <QueueStatusBadge submission={submission} viewerId={viewerId} />
                 </div>
                 <p className="mt-1 text-sm font-medium text-purple/90">
                   {submission.editalTitle}

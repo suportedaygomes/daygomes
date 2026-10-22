@@ -76,8 +76,11 @@ export type CorrectorListFilters = {
   memberQuery: string;
 };
 
+export type QueueAssignmentFilter = "all" | "livre" | "comigo" | "outros";
+
 export type CorrectorQueueFilters = CorrectorListFilters & {
   submissionKind: "all" | "primeiro" | "reenvio";
+  assignment: QueueAssignmentFilter;
 };
 
 export function filterCorrectorListRows<
@@ -96,11 +99,22 @@ export function filterCorrectorListRows<
 export function filterPendingSubmissions(
   rows: PendingSubmissionListRow[],
   filters: CorrectorQueueFilters,
+  viewerId: string,
 ): PendingSubmissionListRow[] {
   return filterCorrectorListRows(rows, filters).filter((row) => {
     if (filters.submissionKind === "primeiro" && row.isResubmit) return false;
     if (filters.submissionKind === "reenvio" && !row.isResubmit) return false;
-    return true;
+
+    switch (filters.assignment) {
+      case "livre":
+        return !row.assigned_corrector_id;
+      case "comigo":
+        return row.assigned_corrector_id === viewerId;
+      case "outros":
+        return Boolean(row.assigned_corrector_id) && row.assigned_corrector_id !== viewerId;
+      default:
+        return true;
+    }
   });
 }
 
