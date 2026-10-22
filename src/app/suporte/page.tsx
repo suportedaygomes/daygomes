@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { LegalEntityNotice } from "@/components/legal/legal-entity-notice";
 import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
 import { SupportRequestForm } from "@/components/support/support-request-form";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
@@ -49,6 +50,7 @@ export default function SuportePublicPage() {
           </Link>
           .
         </p>
+        <LegalEntityNotice compact className="mt-1" />
         <LegalFooterLinks />
       </div>
     </main>

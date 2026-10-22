@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { LegalEntityNotice } from "@/components/legal/legal-entity-notice";
 import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
 import { LEGAL_CONTACT_EMAIL, SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
@@ -43,6 +44,7 @@ export function PublicHomeView() {
             {LEGAL_CONTACT_EMAIL}
           </a>
         </p>
+        <LegalEntityNotice className="mt-2" />
         <nav className="mt-4 flex justify-center">
           <LegalFooterLinks />
         </nav>

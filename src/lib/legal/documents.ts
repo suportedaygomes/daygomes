@@ -9,7 +9,7 @@ export const TERMS_OF_USE: LegalSection[] = [
     id: "1",
     title: "1. Quem somos e o que estes termos regulam",
     paragraphs: [
-      "Estes Termos de Uso disciplinam o acesso e a utilização da plataforma digital Professora Day Gomes, disponível em daygomes.com.br e em seus subdomínios ou aplicativo progressivo (PWA), destinada ao acompanhamento de editais, envio de atividades, correções, comunicação com a equipe e demais funcionalidades educacionais oferecidas pela Professora Day Gomes.",
+      "Estes Termos de Uso disciplinam o acesso e a utilização da plataforma digital Professora Day Gomes (marca), disponível em daygomes.com.br e em seus subdomínios ou aplicativo progressivo (PWA), operada por 68.093.453 VINICIUS CARVALHO LOPES, inscrita no CNPJ 68.093.453/0001-43, destinada ao acompanhamento de editais, envio de atividades, correções, comunicação com a equipe e demais funcionalidades educacionais.",
       "Ao criar conta, entrar na plataforma ou utilizar qualquer serviço disponibilizado, você declara que leu, compreendeu e concorda com estes Termos e com a Política de Privacidade. Se não concordar, não utilize a plataforma.",
     ],
   },
@@ -116,7 +116,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
     id: "1",
     title: "1. Introdução",
     paragraphs: [
-      "Esta Política de Privacidade descreve como a Professora Day Gomes trata dados pessoais de usuários da plataforma, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais, LGPD) e normas complementares.",
+      "Esta Política de Privacidade descreve como a plataforma Professora Day Gomes (marca), operada por 68.093.453 VINICIUS CARVALHO LOPES, CNPJ 68.093.453/0001-43, trata dados pessoais de usuários, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais, LGPD) e normas complementares.",
       "Ao utilizar a plataforma, você confia determinados dados à Professora Day Gomes. Levamos a sério essa confiança e adotamos medidas técnicas e organizacionais proporcionais aos riscos.",
     ],
   },

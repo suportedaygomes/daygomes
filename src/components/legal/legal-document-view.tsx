@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { LegalSection } from "@/lib/legal/documents";
+import { LegalEntityNotice } from "@/components/legal/legal-entity-notice";
 import { LEGAL_LAST_UPDATED, LEGAL_SITE_NAME } from "@/lib/legal/site";
 
 type LegalDocumentViewProps = {
@@ -16,6 +17,7 @@ export function LegalDocumentView({ title, intro, sections }: LegalDocumentViewP
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-3 text-sm text-muted">Última atualização: {LEGAL_LAST_UPDATED}</p>
         <p className="mt-4 text-base leading-7 text-muted">{intro}</p>
+        <LegalEntityNotice className="mt-6 text-left" />
       </header>
 
       <div className="flex flex-col gap-8">

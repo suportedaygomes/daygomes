@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { translateAuthError } from "@/lib/auth-errors";
 import { InstallPrompt } from "@/components/install-prompt";
+import { LegalEntityNotice } from "@/components/legal/legal-entity-notice";
 import { LegalFooterLinks } from "@/components/legal/legal-footer-links";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 
@@ -156,6 +157,7 @@ export function LoginForm() {
           </Link>
           .
         </p>
+        <LegalEntityNotice compact className="mt-2" />
         <LegalFooterLinks />
       </form>
     </div>
