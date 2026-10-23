@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { MarkupSidebar, MarkupToolbar } from "@/components/editais/markup-sidebar";
+import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
+import { isPhaseDescriptionEmpty } from "@/lib/rich-text/phase-description-plain";
 import {
   type MarkupAnnotation,
   type MarkupColorId,
@@ -15,6 +17,7 @@ type SubmissionAnnotatorProps = {
   viewerMode: "image" | "pdf";
   memberName: string;
   phaseTitle: string;
+  phaseDescription?: string;
 };
 
 type DragState = {
@@ -115,7 +118,9 @@ export function SubmissionAnnotator({
   viewerMode,
   memberName,
   phaseTitle,
+  phaseDescription = "",
 }: SubmissionAnnotatorProps) {
+  const showPhaseDescription = !isPhaseDescriptionEmpty(phaseDescription);
   const [color, setColor] = useState<MarkupColorId>("yellow");
   const [annotations, setAnnotations] = useState<MarkupAnnotation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -280,9 +285,10 @@ export function SubmissionAnnotator({
     <div className="min-h-dvh bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-white/10 bg-background/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">{memberName}</p>
-            <p className="text-xs text-muted">{phaseTitle}</p>
+            <p className="mt-0.5 text-xs font-medium text-muted">Tema</p>
+            <p className="text-sm font-semibold leading-snug text-foreground">{phaseTitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <MarkupToolbar
@@ -299,6 +305,15 @@ export function SubmissionAnnotator({
             </Link>
           </div>
         </div>
+        {showPhaseDescription ? (
+          <div className="mx-auto mt-3 max-w-6xl rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <p className="text-xs font-medium text-muted">Descrição do tema</p>
+            <PhaseDescriptionContent
+              html={phaseDescription}
+              className="mt-1.5 max-h-40 overflow-y-auto pr-1 text-xs leading-5"
+            />
+          </div>
+        ) : null}
         <p className="mx-auto mt-2 max-w-6xl text-xs text-muted">
           {viewerMode === "pdf"
             ? "Documento convertido em PDF para correção. Arraste para grifar em cada página."

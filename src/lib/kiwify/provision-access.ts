@@ -6,6 +6,10 @@ import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
 import { syncMemberPhaseAccessForEnrollment } from "@/lib/editais/sync-member-phase-access";
 import { mergeKiwifyEnrollmentQuota } from "@/lib/kiwify/merge-enrollment-quota";
+import {
+  memberHasCorrectionPlatformAccess,
+  removeMemberAccountIfNoCorrectionAccess,
+} from "@/lib/members/member-platform-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProvisionResult =
@@ -64,6 +68,32 @@ export async function provisionKiwifyOrder(
     };
   }
 
+  const purchasedQuota = normalizeKiwifyMappingQuota(mapping.correction_quota);
+
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (purchasedQuota === 0 && !existingProfile) {
+    await admin.from("kiwify_order_events").insert({
+      order_id: orderId,
+      webhook_event_type: payload.webhook_event_type ?? "order_approved",
+      order_status: payload.order_status ?? null,
+      customer_email: email,
+      kiwify_product_id: productId,
+      payload,
+    });
+    return {
+      ok: true,
+      orderId,
+      skipped: true,
+      reason:
+        "Produto sem correções na plataforma — conta e inscrição não criadas (conteúdo só na Kiwify).",
+    };
+  }
+
   const cpfRaw = payload.Customer?.CPF ?? "";
   const cpf = normalizeCpf(cpfRaw);
   const cpfValid = cpf ? isValidCpf(cpf) : false;
@@ -85,7 +115,9 @@ export async function provisionKiwifyOrder(
     return { ok: false, orderId, error: memberResult.error };
   }
 
-  const { profileId, createdUser, temporaryPassword } = memberResult;
+  let profileId: string | null = memberResult.profileId;
+  let createdUser = memberResult.createdUser;
+  const temporaryPassword = memberResult.temporaryPassword;
 
   if (memberResult.cpfOmitted) {
     console.warn("[kiwify:provision] CPF omitido (já usado por outro perfil)", {
@@ -95,8 +127,6 @@ export async function provisionKiwifyOrder(
   }
 
   let enrollmentId: string | null = null;
-
-  const purchasedQuota = normalizeKiwifyMappingQuota(mapping.correction_quota);
 
   const { data: existingEnrollment } = await admin
     .from("member_edital_enrollments")
@@ -147,25 +177,54 @@ export async function provisionKiwifyOrder(
     await syncMemberPhaseAccessForEnrollment(admin, enrollmentId);
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const emailResult = await sendAccessEmail({
-    to: email,
-    fullName,
-    loginUrl: `${siteUrl.replace(/\/$/, "")}/login`,
-    password: createdUser ? temporaryPassword : undefined,
-    productName: productName ?? mapping.kiwify_product_name ?? undefined,
-  });
+  let hasPlatformAccess = await memberHasCorrectionPlatformAccess(admin, profileId);
 
-  await admin.from("kiwify_access_emails").insert({
-    profile_id: profileId,
-    recipient_email: email,
-    subject: createdUser
-      ? `Seu acesso à ${SITE_DISPLAY_NAME} foi liberado`
-      : `Novo curso liberado na ${SITE_DISPLAY_NAME}`,
-    status: emailResult.ok ? "sent" : "failed",
-    error_message: emailResult.ok ? null : emailResult.error,
-    order_id: orderId,
-  });
+  if (!hasPlatformAccess && profileId) {
+    const removal = await removeMemberAccountIfNoCorrectionAccess(admin, profileId);
+    if (removal.removed) {
+      profileId = null;
+      enrollmentId = null;
+      createdUser = false;
+      hasPlatformAccess = false;
+    }
+  }
+
+  const shouldSendAccessEmail =
+    hasPlatformAccess && (createdUser || purchasedQuota > 0);
+
+  let emailSent = false;
+  let emailSkipReason: string | undefined;
+
+  if (shouldSendAccessEmail) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const emailResult = await sendAccessEmail({
+      to: email,
+      fullName,
+      loginUrl: `${siteUrl.replace(/\/$/, "")}/login`,
+      password: createdUser ? temporaryPassword : undefined,
+      productName: productName ?? mapping.kiwify_product_name ?? undefined,
+    });
+
+    emailSent = emailResult.ok;
+
+    await admin.from("kiwify_access_emails").insert({
+      profile_id: profileId,
+      recipient_email: email,
+      subject: createdUser
+        ? `Seu acesso à ${SITE_DISPLAY_NAME} foi liberado`
+        : `Novo curso liberado na ${SITE_DISPLAY_NAME}`,
+      status: emailResult.ok ? "sent" : "failed",
+      error_message: emailResult.ok ? null : emailResult.error,
+      order_id: orderId,
+    });
+
+    if (!emailResult.ok) {
+      emailSkipReason = `E-mail não enviado: ${emailResult.error}`;
+    }
+  } else if (!hasPlatformAccess) {
+    emailSkipReason =
+      "Sem cota de correção na plataforma — e-mail de acesso não enviado.";
+  }
 
   await admin.from("kiwify_order_events").insert({
     order_id: orderId,
@@ -175,7 +234,7 @@ export async function provisionKiwifyOrder(
     kiwify_product_id: productId,
     profile_id: profileId,
     enrollment_id: enrollmentId,
-    access_email_sent: emailResult.ok,
+    access_email_sent: emailSent,
     created_user: createdUser,
     payload,
   });
@@ -183,7 +242,7 @@ export async function provisionKiwifyOrder(
   return {
     ok: true,
     orderId,
-    emailSent: emailResult.ok,
-    reason: emailResult.ok ? undefined : `E-mail não enviado: ${emailResult.error}`,
+    emailSent,
+    reason: emailSkipReason,
   };
 }

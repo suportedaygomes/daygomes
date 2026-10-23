@@ -1,6 +1,7 @@
 import { sendRefundNoticeEmail } from "@/lib/email/send-access-email";
 import { SITE_DISPLAY_NAME } from "@/lib/legal/site";
 import type { KiwifyOrderWebhook } from "@/lib/kiwify/types";
+import { removeMemberAccountIfNoCorrectionAccess } from "@/lib/members/member-platform-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const APPROVAL_EVENTS = new Set(["order_approved", "compra_aprovada"]);
@@ -113,6 +114,10 @@ export async function revokeKiwifyOrder(payload: KiwifyOrderWebhook): Promise<Re
 
   if (deleteError) {
     return { ok: false, orderId, error: "Não foi possível revogar o acesso ao edital." };
+  }
+
+  if (profileId) {
+    await removeMemberAccountIfNoCorrectionAccess(admin, profileId);
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

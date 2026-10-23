@@ -6,6 +6,7 @@ import { parseEvaluationRubric } from "@/lib/editais/evaluation-rubric";
 import { formatEditalDefaultCorrectionQuota } from "@/components/editais/correction-quota-select";
 import { normalizeCorrectionQuota } from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
+import { EditalEnrollmentsList } from "@/components/editais/edital-enrollments-list";
 import { EnrollMemberForm } from "@/components/editais/enroll-member-form";
 import { loadEditalAdminDraft } from "@/lib/editais/edital-admin-draft-server";
 import { listEditalAttachments } from "@/lib/editais/attachments";
@@ -134,19 +135,19 @@ export default async function EditalDetailPage({ params }: PageProps<"/painel/ad
 
       <section>
         <h2 className="panel-title">Membros inscritos</h2>
-        <div className="mt-4 flex flex-col gap-2">
-          {(enrollments ?? []).map((row) => {
-            const member = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-            return (
-              <p key={row.id} className="text-sm">
-                {member?.full_name ?? "—"} · {row.correction_quota} correção(ões) (
-                {member?.email ?? "—"})
-              </p>
-            );
-          })}
-          {!enrollments?.length ? (
-            <p className="text-sm text-muted">Nenhum membro vinculado.</p>
-          ) : null}
+        <div className="mt-4">
+          <EditalEnrollmentsList
+            editalId={id}
+            enrollments={(enrollments ?? []).map((row) => {
+              const member = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+              return {
+                id: row.id,
+                correctionQuota: row.correction_quota,
+                memberName: member?.full_name ?? "—",
+                memberEmail: member?.email ?? "—",
+              };
+            })}
+          />
         </div>
       </section>
     </PainelPage>

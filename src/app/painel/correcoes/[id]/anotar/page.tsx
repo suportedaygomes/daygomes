@@ -44,7 +44,7 @@ export default async function AnotarEnvioPage({
   const { data: submission } = await supabase
     .from("phase_submissions")
     .select(
-      `id, member_id, mime_type, storage_path, preview_storage_path, ${submissionMemberProfileEmbed}, edital_phases(title)`,
+      `id, member_id, mime_type, storage_path, preview_storage_path, ${submissionMemberProfileEmbed}, edital_phases(title, description)`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -73,6 +73,7 @@ export default async function AnotarEnvioPage({
       viewerMode={viewerMode}
       memberName={member?.full_name ?? "Aluno"}
       phaseTitle={phase?.title ?? "Tema"}
+      phaseDescription={phase?.description ?? ""}
     />
     </PainelPage>
   );
