@@ -24,6 +24,7 @@ export function correctorMayAccessPendingSubmission(
   if (role === "admin") return true;
   if (role !== "corretor") return false;
   if (!isPendingCorrectionStatus(submission.status)) return true;
+  if (!submission.assigned_corrector_id) return true;
   return submission.assigned_corrector_id === correctorId;
 }
 
@@ -53,18 +54,15 @@ export async function claimSubmissionForCorrector(
   }
 
   if (role === "admin") {
-    if (!submission.assigned_corrector_id) {
-      await admin
-        .from("phase_submissions")
-        .update({
-          assigned_corrector_id: correctorId,
-          status: "em_correcao",
-        })
-        .eq("id", submissionId)
-        .is("assigned_corrector_id", null)
-        .in("status", ["enviado", "em_correcao"]);
+    const { data: current } = await admin
+      .from("phase_submissions")
+      .select("id, status, assigned_corrector_id, member_id")
+      .eq("id", submissionId)
+      .maybeSingle();
+    if (!current) {
+      return { ok: false, code: "not_found" };
     }
-    return { ok: true, submission };
+    return { ok: true, submission: current };
   }
 
   if (
@@ -106,7 +104,17 @@ export async function claimSubmissionForCorrector(
     return { ok: true, submission: claimed };
   }
 
-  return { ok: true, submission };
+  const { data: current } = await admin
+    .from("phase_submissions")
+    .select("id, status, assigned_corrector_id, member_id")
+    .eq("id", submissionId)
+    .maybeSingle();
+
+  if (!current) {
+    return { ok: false, code: "not_found" };
+  }
+
+  return { ok: true, submission: current };
 }
 
 export type ReleaseSubmissionResult =
@@ -145,17 +153,26 @@ export async function releaseSubmissionToQueue(
     return { ok: false, message: "Esta atividade já está na fila geral." };
   }
 
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("phase_submissions")
     .update({
       assigned_corrector_id: null,
       status: "enviado",
     })
     .eq("id", submissionId)
-    .in("status", ["enviado", "em_correcao"]);
+    .in("status", ["enviado", "em_correcao"])
+    .select("id, status, assigned_corrector_id")
+    .maybeSingle();
 
   if (error) {
     return { ok: false, message: "Não foi possível devolver à fila." };
+  }
+
+  if (!updated || updated.assigned_corrector_id !== null || updated.status !== "enviado") {
+    return {
+      ok: false,
+      message: "Não foi possível devolver à fila. Atualize a página e tente de novo.",
+    };
   }
 
   return { ok: true };

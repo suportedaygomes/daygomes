@@ -1,6 +1,45 @@
 import { correctorMayAccessPendingSubmission } from "@/lib/corrector/submission-assignment";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+function isPendingCorrectionStatus(status: string) {
+  return status === "enviado" || status === "em_correcao";
+}
+
+async function staffMayAccessSubmission(
+  supabase: SupabaseClient,
+  submission: {
+    status: string;
+    assigned_corrector_id: string | null;
+  },
+  userId: string,
+  role: string,
+): Promise<boolean> {
+  if (role === "admin") return true;
+  if (role !== "corretor") return false;
+
+  if (
+    correctorMayAccessPendingSubmission(
+      submission as Parameters<typeof correctorMayAccessPendingSubmission>[0],
+      userId,
+      "corretor",
+    )
+  ) {
+    return true;
+  }
+
+  if (!isPendingCorrectionStatus(submission.status) || !submission.assigned_corrector_id) {
+    return false;
+  }
+
+  const { data: assignee } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", submission.assigned_corrector_id)
+    .maybeSingle();
+
+  return assignee?.role === "admin";
+}
+
 export async function getSubmissionForUser(
   supabase: SupabaseClient,
   submissionId: string,
@@ -34,7 +73,8 @@ export async function getSubmissionForUser(
 
   if (profile.role === "corretor" || profile.role === "admin") {
     if (
-      correctorMayAccessPendingSubmission(
+      await staffMayAccessSubmission(
+        supabase,
         submission,
         userId,
         profile.role as "corretor" | "admin",

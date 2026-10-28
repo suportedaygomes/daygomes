@@ -120,7 +120,7 @@ export function CorrectionForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/painel/correcoes/${submissionId}/anotar`} className="btn-primary w-fit">
+        <Link href={`/painel/correcoes/${submissionId}/anotar`} prefetch={false} className="btn-primary w-fit">
           Marcar redação
         </Link>
         {downloadUrl ? (

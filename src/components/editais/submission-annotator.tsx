@@ -154,7 +154,19 @@ export function SubmissionAnnotator({
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
-        const pdf = await pdfjs.getDocument({ url: previewUrl }).promise;
+
+        const response = await fetch(previewUrl, { credentials: "include" });
+        if (!response.ok) {
+          setPdfError(
+            response.status === 403
+              ? "Sem permissão para ver este PDF. Peça ao admin para devolver à fila ou abra a correção de novo."
+              : "Não foi possível carregar o PDF para marcação.",
+          );
+          return;
+        }
+
+        const data = await response.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data }).promise;
         setPdfPages(pdf.numPages);
       } catch {
         setPdfError("Não foi possível carregar o PDF para marcação.");
@@ -168,7 +180,19 @@ export function SubmissionAnnotator({
     void (async () => {
       try {
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        const pdf = await pdfjs.getDocument({ url: previewUrl }).promise;
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+          "pdfjs-dist/build/pdf.worker.min.mjs",
+          import.meta.url,
+        ).toString();
+
+        const response = await fetch(previewUrl, { credentials: "include" });
+        if (!response.ok) {
+          setPdfError("Não foi possível renderizar o PDF.");
+          return;
+        }
+
+        const data = await response.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data }).promise;
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -299,6 +323,7 @@ export function SubmissionAnnotator({
             />
             <Link
               href={`/painel/correcoes/${submissionId}`}
+              prefetch={false}
               className="btn-secondary h-9 px-4 text-xs font-medium"
             >
               Voltar para correção

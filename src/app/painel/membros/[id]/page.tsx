@@ -81,6 +81,7 @@ export default async function StaffMembroDetailPage({
               <li key={submission.id}>
                 <Link
                   href={`/painel/correcoes/${submission.id}`}
+                  prefetch={false}
                   className="block rounded-xl border border-white/10 bg-field/50 px-3 py-2 text-sm transition hover:border-purple/40"
                 >
                   <p className="font-medium">

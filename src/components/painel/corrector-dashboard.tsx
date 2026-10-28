@@ -70,6 +70,7 @@ export function CorrectorDashboard({ firstName, stats }: CorrectorDashboardProps
             <li key={item.id}>
               <Link
                 href={`/painel/correcoes/${item.id}`}
+                prefetch={false}
                 className="block rounded-2xl border border-white/10 bg-field/60 px-4 py-3 transition hover:border-purple/40"
               >
                 <p className="font-medium">{item.memberName}</p>

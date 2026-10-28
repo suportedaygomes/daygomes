@@ -42,9 +42,7 @@ export async function GET(_request: Request, context: RouteContext) {
     });
   }
 
-  const { data, error } = await supabase.storage
-    .from("submissions")
-    .download(submission.storage_path);
+  const { data, error } = await supabase.storage.from("submissions").download(path);
 
   if (error || !data) {
     return NextResponse.json({ error: "Arquivo indisponível." }, { status: 404 });

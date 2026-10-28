@@ -297,6 +297,7 @@ export function CorrectionsQueueView({
             <article key={submission.id} className="panel-card flex flex-col gap-2">
               <Link
                 href={`/painel/correcoes/${submission.id}`}
+                prefetch={false}
                 className={`transition hover:opacity-90 ${withOtherCorrector ? "opacity-90" : ""}`}
                 title={
                   withOtherCorrector

@@ -225,6 +225,7 @@ export async function releaseCorrectionToQueue(submissionId: string) {
   if (result.ok) {
     revalidatePath("/painel/correcoes");
     revalidatePath(`/painel/correcoes/${submissionId}`);
+    revalidatePath(`/painel/correcoes/${submissionId}/anotar`);
   }
 
   return result;
