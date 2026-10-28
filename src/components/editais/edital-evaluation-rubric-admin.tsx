@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useRouter } from "next/navigation";
 import { EvaluationRubricEditor } from "@/components/editais/evaluation-rubric-editor";
 import { EditalDraftStatusBanner } from "@/components/editais/edital-draft-status-banner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   clearEditalAdminDraftSectionClient,
   useEditalAdminDraftSync,
@@ -40,6 +41,7 @@ export function EditalEvaluationRubricAdmin({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
   const hasUnpublishedChanges = !rubricsEqual(published, rubric);
   const draftRevisionMismatch =
@@ -77,11 +79,8 @@ export function EditalEvaluationRubricAdmin({
     void clearEditalAdminDraftSectionClient(editalId, "evaluationRubric");
   }, [editalId, published]);
 
-  function discardDraft() {
-    const ok = window.confirm(
-      "Descartar o rascunho dos quesitos e voltar à versão publicada?",
-    );
-    if (!ok) return;
+  function confirmDiscardDraft() {
+    setDiscardConfirmOpen(false);
     resetToPublished();
     setMessage("Rascunho dos quesitos descartado.");
   }
@@ -154,12 +153,22 @@ export function EditalEvaluationRubricAdmin({
             type="button"
             className="btn-secondary w-fit"
             disabled={pending || !hasUnpublishedChanges}
-            onClick={discardDraft}
+            onClick={() => setDiscardConfirmOpen(true)}
           >
             Cancelar alterações
           </button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        title="Descartar rascunho dos quesitos?"
+        description="Voltar à versão publicada? As alterações não salvas serão perdidas."
+        confirmLabel="Descartar rascunho"
+        danger
+        onConfirm={confirmDiscardDraft}
+        onCancel={() => setDiscardConfirmOpen(false)}
+      />
     </section>
   );
 }

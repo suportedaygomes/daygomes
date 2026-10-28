@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CargoActivityPhasesFields } from "@/components/editais/cargo-activity-phases-fields";
 import { CorrectionQuotaSelect } from "@/components/editais/correction-quota-select";
 import { EditalDraftStatusBanner } from "@/components/editais/edital-draft-status-banner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SubmissionPeriodPerCargoHints } from "@/components/editais/submission-period-per-cargo-hints";
 import {
   clearEditalAdminDraftSectionClient,
@@ -144,6 +145,7 @@ export function EditEditalForm({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(adminDraft?.updatedAt ?? null);
   const draftRevisionMismatch =
     Boolean(adminDraft?.structure) &&
@@ -220,11 +222,8 @@ export function EditEditalForm({
     setCargos((current) => current.map((item, i) => (i === index ? cargo : item)));
   }
 
-  function discardDraft() {
-    const ok = window.confirm(
-      "Descartar o rascunho e voltar à versão publicada? As alterações não salvas serão perdidas.",
-    );
-    if (!ok) return;
+  function confirmDiscardDraft() {
+    setDiscardConfirmOpen(false);
     resetToPublished();
     setMessage("Rascunho descartado. Você está vendo a versão publicada.");
   }
@@ -278,6 +277,7 @@ export function EditEditalForm({
   }
 
   return (
+    <>
     <form onSubmit={onSubmit} className="panel-card flex flex-col gap-6">
       <div>
         <h2 className="panel-title">Editar edital</h2>
@@ -469,11 +469,22 @@ export function EditEditalForm({
           type="button"
           className="btn-secondary"
           disabled={pending || !hasUnpublishedChanges}
-          onClick={discardDraft}
+          onClick={() => setDiscardConfirmOpen(true)}
         >
           Cancelar alterações
         </button>
       </div>
     </form>
+
+    <ConfirmDialog
+      open={discardConfirmOpen}
+      title="Descartar rascunho do edital?"
+      description="Voltar à versão publicada? As alterações não salvas serão perdidas."
+      confirmLabel="Descartar rascunho"
+      danger
+      onConfirm={confirmDiscardDraft}
+      onCancel={() => setDiscardConfirmOpen(false)}
+    />
+    </>
   );
 }

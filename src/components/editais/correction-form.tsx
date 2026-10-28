@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { releaseCorrectionToQueue, saveCorrection } from "@/app/actions/corrections";
 import { CorrectionRubricPanel } from "@/components/editais/correction-rubric-panel";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { EditalEvaluationRubric, RubricScores } from "@/lib/editais/evaluation-rubric";
 
 export type CorrectionResubmitMode = "none" | "free" | "charged";
@@ -55,15 +56,10 @@ export function CorrectionForm({
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [releasePending, setReleasePending] = useState(false);
+  const [releaseConfirmOpen, setReleaseConfirmOpen] = useState(false);
 
-  async function onReleaseToQueue() {
-    if (
-      !window.confirm(
-        "Devolver esta atividade à fila? Outro corretor (ou você depois) poderá pegá-la de novo.",
-      )
-    ) {
-      return;
-    }
+  async function confirmReleaseToQueue() {
+    setReleaseConfirmOpen(false);
     setError("");
     setMessage("");
     setReleasePending(true);
@@ -111,6 +107,7 @@ export function CorrectionForm({
   }
 
   return (
+    <>
     <form onSubmit={onSubmit} className="panel-card flex flex-col gap-4">
       <div>
         <p className="text-sm text-muted">Aluno</p>
@@ -133,7 +130,7 @@ export function CorrectionForm({
             type="button"
             className="btn-secondary w-fit"
             disabled={pending || releasePending}
-            onClick={onReleaseToQueue}
+            onClick={() => setReleaseConfirmOpen(true)}
           >
             {releasePending ? "Devolvendo..." : "Devolver à fila"}
           </button>
@@ -241,5 +238,16 @@ export function CorrectionForm({
         {pending ? "Salvando..." : "Salvar correção"}
       </button>
     </form>
+
+    <ConfirmDialog
+      open={releaseConfirmOpen}
+      title="Devolver à fila?"
+      description="Outro corretor (ou você depois) poderá pegar esta atividade de novo."
+      confirmLabel="Devolver à fila"
+      pending={releasePending}
+      onConfirm={confirmReleaseToQueue}
+      onCancel={() => setReleaseConfirmOpen(false)}
+    />
+    </>
   );
 }

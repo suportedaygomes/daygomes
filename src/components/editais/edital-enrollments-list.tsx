@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export type EditalEnrollmentRow = {
   id: string;
@@ -15,21 +16,19 @@ type EditalEnrollmentsListProps = {
   enrollments: EditalEnrollmentRow[];
 };
 
+type UnenrollTarget = { id: string; memberName: string };
+
 export function EditalEnrollmentsList({ editalId, enrollments }: EditalEnrollmentsListProps) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<UnenrollTarget | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function unenroll(enrollmentId: string, memberName: string) {
-    if (
-      !window.confirm(
-        `Desvincular ${memberName} desta mentoria? Se for o único acesso com correção, o login na plataforma será removido.`,
-      )
-    ) {
-      return;
-    }
-
+  async function confirmUnenroll() {
+    if (!confirmTarget) return;
+    const { id: enrollmentId } = confirmTarget;
+    setConfirmTarget(null);
     setError("");
     setMessage("");
     setPendingId(enrollmentId);
@@ -82,13 +81,33 @@ export function EditalEnrollmentsList({ editalId, enrollments }: EditalEnrollmen
               type="button"
               className="btn-secondary btn-sm shrink-0 text-xs"
               disabled={pendingId === row.id}
-              onClick={() => unenroll(row.id, row.memberName)}
+              onClick={() => setConfirmTarget({ id: row.id, memberName: row.memberName })}
             >
               {pendingId === row.id ? "Desvinculando..." : "Desvincular"}
             </button>
           </li>
         ))}
       </ul>
+
+      <ConfirmDialog
+        open={Boolean(confirmTarget)}
+        title="Desvincular membro?"
+        description={
+          confirmTarget ? (
+            <>
+              Remover <strong className="text-foreground">{confirmTarget.memberName}</strong> desta
+              mentoria? Se for o único acesso com correção, o login na plataforma será removido.
+            </>
+          ) : (
+            ""
+          )
+        }
+        confirmLabel="Desvincular"
+        danger
+        pending={Boolean(pendingId)}
+        onConfirm={confirmUnenroll}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }
