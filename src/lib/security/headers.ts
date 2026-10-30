@@ -65,6 +65,7 @@ function contentSecurityPolicy(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'self'",
+    "frame-src 'self'",
     "object-src 'none'",
     `connect-src 'self' ${supabaseOrigin} ${supabaseWs}`,
     "img-src 'self' data: blob: https://*.supabase.co",

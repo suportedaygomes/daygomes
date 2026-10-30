@@ -133,7 +133,6 @@ export function SubmissionMarkupViewer({
 }: SubmissionMarkupViewerProps) {
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const numbered = useMemo(
@@ -176,12 +175,10 @@ export function SubmissionMarkupViewer({
         const data = await blob.arrayBuffer();
         const pdf = await pdfjs.getDocument({ data }).promise;
         if (cancelled) return;
-
-        const objectUrl = URL.createObjectURL(blob);
-        setPdfBlobUrl((previous) => {
-          if (previous) URL.revokeObjectURL(previous);
-          return objectUrl;
-        });
+        if (pdf.numPages < 1) {
+          setPdfError("Não foi possível carregar o PDF corrigido.");
+          return;
+        }
         setPdfPages(pdf.numPages);
       } catch {
         if (!cancelled) setPdfError("Não foi possível carregar o PDF corrigido.");
@@ -190,10 +187,6 @@ export function SubmissionMarkupViewer({
 
     return () => {
       cancelled = true;
-      setPdfBlobUrl((previous) => {
-        if (previous) URL.revokeObjectURL(previous);
-        return null;
-      });
     };
   }, [previewUrl, viewerMode]);
 
@@ -222,7 +215,7 @@ export function SubmissionMarkupViewer({
           </ReadonlyOverlay>
         ) : pdfError ? (
           <p className="alert-error">{pdfError}</p>
-        ) : !pdfBlobUrl || pdfPages === 0 ? (
+        ) : pdfPages === 0 ? (
           <p className="text-sm text-muted">Carregando documento...</p>
         ) : (
           Array.from({ length: pdfPages }, (_, index) => {
@@ -237,7 +230,7 @@ export function SubmissionMarkupViewer({
                   onSelect={selectMarkup}
                 >
                   <SubmissionPdfEmbedPage
-                    blobUrl={pdfBlobUrl}
+                    previewUrl={previewUrl}
                     page={page}
                     title={`Atividade corrigida — página ${page}`}
                   />

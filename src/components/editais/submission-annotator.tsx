@@ -136,17 +136,12 @@ export function SubmissionAnnotator({
   const [loaded, setLoaded] = useState(false);
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [activePreviewUrl, setActivePreviewUrl] = useState(previewUrl);
 
   useEffect(() => {
     setActivePreviewUrl(previewUrl);
     setPdfPages(0);
     setPdfError("");
-    setPdfBlobUrl((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return null;
-    });
   }, [previewUrl]);
 
   useEffect(() => {
@@ -200,16 +195,6 @@ export function SubmissionAnnotator({
           return;
         }
 
-        const objectUrl = URL.createObjectURL(blob);
-        if (cancelled) {
-          URL.revokeObjectURL(objectUrl);
-          return;
-        }
-
-        setPdfBlobUrl((previous) => {
-          if (previous) URL.revokeObjectURL(previous);
-          return objectUrl;
-        });
         setPdfPages(pdf.numPages);
       } catch {
         if (cancelled) return;
@@ -225,16 +210,6 @@ export function SubmissionAnnotator({
       cancelled = true;
     };
   }, [activePreviewUrl, fallbackPreviewUrl, viewerMode]);
-
-  useEffect(
-    () => () => {
-      setPdfBlobUrl((previous) => {
-        if (previous) URL.revokeObjectURL(previous);
-        return null;
-      });
-    },
-    [],
-  );
 
   const relativePoint = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const el = event.currentTarget;
@@ -385,7 +360,7 @@ export function SubmissionAnnotator({
               </MarkupOverlay>
             ) : pdfError ? (
               <p className="alert-error">{pdfError}</p>
-            ) : !pdfBlobUrl || pdfPages === 0 ? (
+            ) : pdfPages === 0 ? (
               <p className="text-sm text-muted">Carregando PDF...</p>
             ) : (
               Array.from({ length: pdfPages }, (_, index) => {
@@ -395,7 +370,7 @@ export function SubmissionAnnotator({
                     <p className="mb-2 text-xs font-semibold text-muted">Página {page}</p>
                     <MarkupOverlay page={page} {...overlayProps}>
                       <SubmissionPdfEmbedPage
-                        blobUrl={pdfBlobUrl}
+                        previewUrl={activePreviewUrl}
                         page={page}
                         title={`Redação enviada — página ${page}`}
                       />
