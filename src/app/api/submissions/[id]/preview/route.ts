@@ -35,7 +35,8 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: object.error }, { status: 404 });
     }
 
-    const body = await object.body.transformToByteArray();
+    const bytes = await object.body.transformToByteArray();
+    const body = Buffer.from(bytes);
     return new NextResponse(body, {
       headers: {
         "Content-Type":
