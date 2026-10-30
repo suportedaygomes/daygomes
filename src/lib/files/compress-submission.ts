@@ -1,7 +1,7 @@
 import sharp from "sharp";
 
 const MAX_IMAGE_EDGE = 2400;
-const IMAGE_WEBP_QUALITY = 88;
+const IMAGE_WEBP_QUALITY = 92;
 const MAX_OTHER_BYTES = 8 * 1024 * 1024;
 
 export type CompressedFile = {
@@ -44,9 +44,16 @@ async function compressImage(input: Buffer, mime: string) {
   const webp = await resized.webp({ quality: IMAGE_WEBP_QUALITY, effort: 4 }).toBuffer();
 
   if (mime === "image/png" && webp.length > input.length * 0.95) {
-    const png = await resized.png({ compressionLevel: 9, palette: true }).toBuffer();
+    const png = await resized.png({ compressionLevel: 9, palette: false }).toBuffer();
     if (png.length <= webp.length) {
       return { buffer: png, mimeType: "image/png", extension: "png" };
+    }
+  }
+
+  if (mime === "image/jpeg" || mime === "image/jpg") {
+    const jpeg = await resized.jpeg({ quality: 92, mozjpeg: true }).toBuffer();
+    if (jpeg.length <= webp.length * 1.08) {
+      return { buffer: jpeg, mimeType: "image/jpeg", extension: "jpg" };
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { SubmissionPdfEmbedPage } from "@/components/editais/submission-pdf-embed-page";
 import {
   MARKUP_COLORS,
   type MarkupAnnotation,
@@ -87,7 +88,7 @@ function ReadonlyOverlay({
   const pageAnnotations = annotations.filter((item) => (item.page || 1) === page);
 
   return (
-    <div className="relative overflow-visible rounded-2xl border border-white/10 bg-black/40">
+    <div className="relative overflow-visible rounded-2xl border border-[color:var(--border-subtle)] bg-white">
       <div className="overflow-hidden rounded-2xl">{children}</div>
       {pageAnnotations.map((item) => {
         const isActive = activeId === item.id;
@@ -132,8 +133,8 @@ export function SubmissionMarkupViewer({
 }: SubmissionMarkupViewerProps) {
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
 
   const numbered = useMemo(
     () =>
@@ -155,48 +156,46 @@ export function SubmissionMarkupViewer({
   useEffect(() => {
     if (viewerMode !== "pdf") return;
 
+    let cancelled = false;
+
     void (async () => {
       try {
+        const response = await fetch(previewUrl, { credentials: "include" });
+        if (!response.ok) {
+          setPdfError("Não foi possível carregar o PDF corrigido.");
+          return;
+        }
+
+        const blob = await response.blob();
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
-        const pdf = await pdfjs.getDocument({ url: previewUrl }).promise;
+
+        const data = await blob.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data }).promise;
+        if (cancelled) return;
+
+        const objectUrl = URL.createObjectURL(blob);
+        setPdfBlobUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return objectUrl;
+        });
         setPdfPages(pdf.numPages);
       } catch {
-        setPdfError("Não foi possível carregar o PDF corrigido.");
+        if (!cancelled) setPdfError("Não foi possível carregar o PDF corrigido.");
       }
     })();
+
+    return () => {
+      cancelled = true;
+      setPdfBlobUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return null;
+      });
+    };
   }, [previewUrl, viewerMode]);
-
-  useEffect(() => {
-    if (viewerMode !== "pdf" || pdfPages === 0) return;
-
-    void (async () => {
-      try {
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        const pdf = await pdfjs.getDocument({ url: previewUrl }).promise;
-
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-          const canvas = canvasRefs.current.get(pageNumber);
-          if (!canvas) continue;
-
-          const page = await pdf.getPage(pageNumber);
-          const viewport = page.getViewport({ scale: 1.35 });
-          const context = canvas.getContext("2d");
-          if (!context) continue;
-
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          await page.render({ canvasContext: context, viewport, canvas }).promise;
-        }
-      } catch {
-        setPdfError("Não foi possível renderizar o PDF.");
-      }
-    })();
-  }, [previewUrl, viewerMode, pdfPages]);
 
   return (
     <div className={`flex flex-col gap-6 ${activeItem ? "pb-36 sm:pb-40" : ""}`}>
@@ -223,7 +222,7 @@ export function SubmissionMarkupViewer({
           </ReadonlyOverlay>
         ) : pdfError ? (
           <p className="alert-error">{pdfError}</p>
-        ) : pdfPages === 0 ? (
+        ) : !pdfBlobUrl || pdfPages === 0 ? (
           <p className="text-sm text-muted">Carregando documento...</p>
         ) : (
           Array.from({ length: pdfPages }, (_, index) => {
@@ -237,11 +236,10 @@ export function SubmissionMarkupViewer({
                   activeId={activeId}
                   onSelect={selectMarkup}
                 >
-                  <canvas
-                    ref={(node) => {
-                      if (node) canvasRefs.current.set(page, node);
-                    }}
-                    className="block h-auto w-full"
+                  <SubmissionPdfEmbedPage
+                    blobUrl={pdfBlobUrl}
+                    page={page}
+                    title={`Atividade corrigida — página ${page}`}
                   />
                 </ReadonlyOverlay>
               </div>

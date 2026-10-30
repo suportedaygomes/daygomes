@@ -103,13 +103,16 @@ export function getSubmissionPreviewPath(submission: {
   preview_storage_path: string | null;
   mime_type: string | null;
 }) {
+  if (submission.mime_type === "application/pdf" && submission.storage_path) {
+    return submission.storage_path;
+  }
   if (submission.preview_storage_path) {
     return submission.preview_storage_path;
   }
   if (submission.mime_type === "application/pdf" || isImageSubmission(submission.mime_type)) {
     return submission.storage_path;
   }
-  return submission.preview_storage_path ?? submission.storage_path;
+  return submission.storage_path;
 }
 
 export function getAnnotatorViewerMode(submission: {
@@ -117,8 +120,9 @@ export function getAnnotatorViewerMode(submission: {
   preview_storage_path: string | null;
   mime_type: string | null;
 }): "image" | "pdf" {
-  if (submission.preview_storage_path) return "pdf";
-  if (submission.mime_type === "application/pdf") return "pdf";
   if (isImageSubmission(submission.mime_type)) return "image";
+  if (submission.preview_storage_path || submission.mime_type === "application/pdf") {
+    return "pdf";
+  }
   return "pdf";
 }

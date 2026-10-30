@@ -82,7 +82,7 @@ export function PainelShell({
         </div>
       </header>
 
-      <div className="mt-5 w-full min-w-0 flex-1 pb-[max(2rem,env(safe-area-inset-bottom))] sm:mt-8">
+      <div className="mt-5 flex min-h-0 w-full min-w-0 flex-1 flex-col pb-[max(2rem,env(safe-area-inset-bottom))] sm:mt-8">
         {children}
       </div>
     </main>

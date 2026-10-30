@@ -22,7 +22,12 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const submission = access.submission;
-  const path = getSubmissionPreviewPath(submission);
+  const url = new URL(_request.url);
+  const source = url.searchParams.get("source");
+  const path =
+    source === "original"
+      ? submission.storage_path
+      : getSubmissionPreviewPath(submission);
 
   if (path.startsWith("submissions/")) {
     const object = await getR2ObjectStream(path);
@@ -30,13 +35,15 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: object.error }, { status: 404 });
     }
 
-    const body = object.body.transformToWebStream();
+    const body = await object.body.transformToByteArray();
     return new NextResponse(body, {
       headers: {
         "Content-Type":
-          path.endsWith(".pdf") || submission.preview_storage_path
+          path.endsWith(".pdf") || submission.mime_type === "application/pdf"
             ? "application/pdf"
             : submission.mime_type ?? object.contentType,
+        "Content-Length": String(body.byteLength),
+        "Content-Disposition": "inline",
         "Cache-Control": "private, max-age=300",
       },
     });

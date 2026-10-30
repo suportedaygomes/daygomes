@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useState, type PointerEvent } from "react";
 import { MarkupSidebar, MarkupToolbar } from "@/components/editais/markup-sidebar";
+import { SubmissionPdfEmbedPage } from "@/components/editais/submission-pdf-embed-page";
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
 import { isPhaseDescriptionEmpty } from "@/lib/rich-text/phase-description-plain";
 import {
@@ -14,6 +15,8 @@ import {
 type SubmissionAnnotatorProps = {
   submissionId: string;
   previewUrl: string;
+  /** Quando o preview convertido falhar, tenta o arquivo original (ex.: PDF enviado pelo aluno). */
+  fallbackPreviewUrl?: string;
   viewerMode: "image" | "pdf";
   memberName: string;
   phaseTitle: string;
@@ -67,7 +70,7 @@ function MarkupOverlay({
 
   return (
     <div
-      className="relative touch-none select-none overflow-hidden rounded-2xl border border-white/10 bg-black/40"
+      className="relative touch-none select-none overflow-visible rounded-2xl border border-[color:var(--border-subtle)] bg-white"
       data-markup-page={page}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -115,6 +118,7 @@ function MarkupOverlay({
 export function SubmissionAnnotator({
   submissionId,
   previewUrl,
+  fallbackPreviewUrl,
   viewerMode,
   memberName,
   phaseTitle,
@@ -132,7 +136,18 @@ export function SubmissionAnnotator({
   const [loaded, setLoaded] = useState(false);
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
-  const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [activePreviewUrl, setActivePreviewUrl] = useState(previewUrl);
+
+  useEffect(() => {
+    setActivePreviewUrl(previewUrl);
+    setPdfPages(0);
+    setPdfError("");
+    setPdfBlobUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, [previewUrl]);
 
   useEffect(() => {
     void (async () => {
@@ -147,16 +162,20 @@ export function SubmissionAnnotator({
   useEffect(() => {
     if (viewerMode !== "pdf") return;
 
+    let cancelled = false;
+
     void (async () => {
       try {
-        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
-
-        const response = await fetch(previewUrl, { credentials: "include" });
+        const response = await fetch(activePreviewUrl, { credentials: "include" });
         if (!response.ok) {
+          if (
+            fallbackPreviewUrl &&
+            activePreviewUrl !== fallbackPreviewUrl &&
+            (response.status === 404 || response.status === 403)
+          ) {
+            setActivePreviewUrl(fallbackPreviewUrl);
+            return;
+          }
           setPdfError(
             response.status === 403
               ? "Sem permissão para ver este PDF. Peça ao admin para devolver à fila ou abra a correção de novo."
@@ -165,54 +184,57 @@ export function SubmissionAnnotator({
           return;
         }
 
-        const data = await response.arrayBuffer();
-        const pdf = await pdfjs.getDocument({ data }).promise;
-        setPdfPages(pdf.numPages);
-      } catch {
-        setPdfError("Não foi possível carregar o PDF para marcação.");
-      }
-    })();
-  }, [previewUrl, viewerMode]);
+        const blob = await response.blob();
+        if (cancelled) return;
 
-  useEffect(() => {
-    if (viewerMode !== "pdf" || pdfPages === 0) return;
-
-    void (async () => {
-      try {
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.min.mjs",
           import.meta.url,
         ).toString();
 
-        const response = await fetch(previewUrl, { credentials: "include" });
-        if (!response.ok) {
-          setPdfError("Não foi possível renderizar o PDF.");
+        const data = await blob.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data }).promise;
+        if (pdf.numPages < 1) {
+          setPdfError("O PDF deste envio está vazio.");
           return;
         }
 
-        const data = await response.arrayBuffer();
-        const pdf = await pdfjs.getDocument({ data }).promise;
-
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-          const canvas = canvasRefs.current.get(pageNumber);
-          if (!canvas) continue;
-
-          const page = await pdf.getPage(pageNumber);
-          const viewport = page.getViewport({ scale: 1.35 });
-          const context = canvas.getContext("2d");
-          if (!context) continue;
-
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          await page.render({ canvasContext: context, viewport, canvas }).promise;
+        const objectUrl = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl);
+          return;
         }
+
+        setPdfBlobUrl((previous) => {
+          if (previous) URL.revokeObjectURL(previous);
+          return objectUrl;
+        });
+        setPdfPages(pdf.numPages);
       } catch {
-        setPdfError("Não foi possível renderizar o PDF.");
+        if (cancelled) return;
+        if (fallbackPreviewUrl && activePreviewUrl !== fallbackPreviewUrl) {
+          setActivePreviewUrl(fallbackPreviewUrl);
+          return;
+        }
+        setPdfError("Não foi possível carregar o PDF para marcação.");
       }
     })();
-  }, [previewUrl, viewerMode, pdfPages]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePreviewUrl, fallbackPreviewUrl, viewerMode]);
+
+  useEffect(
+    () => () => {
+      setPdfBlobUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return null;
+      });
+    },
+    [],
+  );
 
   const relativePoint = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const el = event.currentTarget;
@@ -306,103 +328,105 @@ export function SubmissionAnnotator({
   };
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">{memberName}</p>
-            <p className="mt-0.5 text-xs font-medium text-muted">Tema</p>
-            <p className="text-sm font-semibold leading-snug text-foreground">{phaseTitle}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <MarkupToolbar
-              color={color}
-              pending={pending}
-              onColorChange={setColor}
-              onSave={saveMarkups}
-            />
-            <Link
-              href={`/painel/correcoes/${submissionId}`}
-              prefetch={false}
-              className="btn-secondary h-9 px-4 text-xs font-medium"
-            >
-              Voltar para correção
-            </Link>
-          </div>
+    <div className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] shadow-sm">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--border-subtle)] px-4 py-2.5">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Correção</p>
+          <p className="mt-0.5 truncate text-base font-semibold">{memberName}</p>
         </div>
-        {showPhaseDescription ? (
-          <div className="mx-auto mt-3 max-w-6xl rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-            <p className="text-xs font-medium text-muted">Descrição do tema</p>
-            <PhaseDescriptionContent
-              html={phaseDescription}
-              className="mt-1.5 max-h-40 overflow-y-auto pr-1 text-xs leading-5"
-            />
-          </div>
-        ) : null}
-        <p className="mx-auto mt-2 max-w-6xl text-xs text-muted">
-          {viewerMode === "pdf"
-            ? "Documento convertido em PDF para correção. Arraste para grifar em cada página."
-            : "Arraste sobre a redação para grifar. Ao soltar, descreva o erro no painel à direita."}
-        </p>
+        <Link
+          href={`/painel/correcoes/${submissionId}`}
+          prefetch={false}
+          className="btn-secondary hidden h-9 shrink-0 px-4 text-xs font-medium sm:inline-flex"
+        >
+          Voltar para correção
+        </Link>
       </header>
 
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex flex-col gap-6">
-          {viewerMode === "image" ? (
-            <MarkupOverlay page={1} {...overlayProps}>
-              <img
-                src={previewUrl}
-                alt="Envio do aluno"
-                className="block h-auto w-full pointer-events-none"
-                draggable={false}
+      <section className="shrink-0 border-b border-[color:var(--border-subtle)] bg-field/25 px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">Tema</p>
+        <p className="mt-1 text-sm font-semibold leading-snug sm:text-base">{phaseTitle}</p>
+        {showPhaseDescription ? (
+          <details className="mt-2 group">
+            <summary className="cursor-pointer text-xs font-medium text-purple marker:content-none [&::-webkit-details-marker]:hidden">
+              Enunciado completo
+            </summary>
+            <div className="mt-2 pr-1">
+              <PhaseDescriptionContent
+                html={phaseDescription}
+                className="text-xs leading-relaxed text-foreground/90 sm:text-sm [&_p]:mt-1.5 [&_p:first-child]:mt-0"
               />
-            </MarkupOverlay>
-          ) : pdfError ? (
-            <p className="alert-error">{pdfError}</p>
-          ) : pdfPages === 0 ? (
-            <p className="text-sm text-muted">Carregando PDF...</p>
-          ) : (
-            Array.from({ length: pdfPages }, (_, index) => {
-              const page = index + 1;
-              return (
-                <div key={page}>
-                  <p className="mb-2 text-xs font-semibold text-muted">Página {page}</p>
-                  <MarkupOverlay page={page} {...overlayProps}>
-                    <canvas
-                      ref={(node) => {
-                        if (node) canvasRefs.current.set(page, node);
-                      }}
-                      className="block h-auto w-full"
-                    />
-                  </MarkupOverlay>
-                </div>
-              );
-            })
-          )}
-        </div>
+            </div>
+          </details>
+        ) : null}
+      </section>
 
-        <MarkupSidebar
-          annotations={annotations}
-          activeId={activeId}
-          loaded={loaded}
+      <div className="sticky top-0 z-20 border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/95 backdrop-blur-sm">
+        <MarkupToolbar
+          layout="strip"
           color={color}
           pending={pending}
-          error={error}
-          message={message}
           onColorChange={setColor}
           onSave={saveMarkups}
-          onNoteChange={(id, note) =>
-            setAnnotations((current) =>
-              current.map((item) => (item.id === id ? { ...item, note } : item)),
-            )
-          }
-          onRemove={(id) => {
-            setAnnotations((current) => current.filter((item) => item.id !== id));
-            if (activeId === id) setActiveId(null);
-          }}
-          onFocus={setActiveId}
-          correctionHref={`/painel/correcoes/${submissionId}`}
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:items-start lg:gap-5 lg:p-4 lg:pt-3">
+        <div className="min-w-0 border-[color:var(--border-subtle)] bg-field/30 p-2 sm:p-3 lg:rounded-xl lg:border">
+          <div className="flex w-full min-w-0 flex-col gap-6">
+            {viewerMode === "image" ? (
+              <MarkupOverlay page={1} {...overlayProps}>
+                <img
+                  src={activePreviewUrl}
+                  alt="Envio do aluno"
+                  className="pointer-events-none block h-auto w-full max-w-full"
+                  draggable={false}
+                />
+              </MarkupOverlay>
+            ) : pdfError ? (
+              <p className="alert-error">{pdfError}</p>
+            ) : !pdfBlobUrl || pdfPages === 0 ? (
+              <p className="text-sm text-muted">Carregando PDF...</p>
+            ) : (
+              Array.from({ length: pdfPages }, (_, index) => {
+                const page = index + 1;
+                return (
+                  <div key={page}>
+                    <p className="mb-2 text-xs font-semibold text-muted">Página {page}</p>
+                    <MarkupOverlay page={page} {...overlayProps}>
+                      <SubmissionPdfEmbedPage
+                        blobUrl={pdfBlobUrl}
+                        page={page}
+                        title={`Redação enviada — página ${page}`}
+                      />
+                    </MarkupOverlay>
+                  </div>
+                );
+              })
+            )}
+            </div>
+        </div>
+
+        <div className="border-t border-[color:var(--border-subtle)] bg-field/20 lg:sticky lg:top-[3.25rem] lg:max-h-[calc(100vh-4rem)] lg:self-start lg:overflow-y-auto lg:rounded-xl lg:border lg:border-t lg:bg-field/30">
+          <MarkupSidebar
+            annotations={annotations}
+            activeId={activeId}
+            loaded={loaded}
+            error={error}
+            message={message}
+            onNoteChange={(id, note) =>
+              setAnnotations((current) =>
+                current.map((item) => (item.id === id ? { ...item, note } : item)),
+              )
+            }
+            onRemove={(id) => {
+              setAnnotations((current) => current.filter((item) => item.id !== id));
+              if (activeId === id) setActiveId(null);
+            }}
+            onFocus={setActiveId}
+            correctionHref={`/painel/correcoes/${submissionId}`}
+          />
+        </div>
       </div>
     </div>
   );

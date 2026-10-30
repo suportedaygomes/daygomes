@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SubmissionAnnotator } from "@/components/editais/submission-annotator";
-import { MemberContactCard } from "@/components/painel/member-contact-card";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { loadCorrectionSubmissionForStaff } from "@/lib/corrector/load-correction-submission";
 import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
-import { getStaffMemberContact } from "@/lib/members/staff-member-profile";
 import { getAnnotatorViewerMode } from "@/lib/submissions/access";
 import { createClient } from "@/lib/supabase/server";
 
@@ -51,10 +49,6 @@ export default async function AnotarEnvioPage({
 
   if (!submission) redirect("/painel/correcoes");
 
-  const memberContact = profile
-    ? await getStaffMemberContact(submission.member_id, profile)
-    : null;
-
   const member = Array.isArray(submission.profiles)
     ? submission.profiles[0]
     : submission.profiles;
@@ -65,16 +59,21 @@ export default async function AnotarEnvioPage({
   const viewerMode = getAnnotatorViewerMode(submission);
 
   return (
-    <PainelPage gap="sm">
-      {memberContact ? <MemberContactCard member={memberContact} compact /> : null}
+    <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] -mt-5 w-screen max-w-[100vw] px-3 pb-8 sm:-mt-8 sm:px-4 lg:px-5">
       <SubmissionAnnotator
-      submissionId={id}
-      previewUrl={`/api/submissions/${id}/preview`}
-      viewerMode={viewerMode}
-      memberName={member?.full_name ?? "Aluno"}
-      phaseTitle={phase?.title ?? "Tema"}
-      phaseDescription={phase?.description ?? ""}
-    />
-    </PainelPage>
+        submissionId={id}
+        previewUrl={`/api/submissions/${id}/preview?source=original`}
+        fallbackPreviewUrl={
+          submission.preview_storage_path &&
+          submission.preview_storage_path !== submission.storage_path
+            ? `/api/submissions/${id}/preview?source=original`
+            : undefined
+        }
+        viewerMode={viewerMode}
+        memberName={member?.full_name ?? "Aluno"}
+        phaseTitle={phase?.title ?? "Tema"}
+        phaseDescription={phase?.description ?? ""}
+      />
+    </div>
   );
 }
