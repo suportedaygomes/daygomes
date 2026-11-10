@@ -58,41 +58,48 @@ export function CreateEditalForm() {
     setError("");
     setPending(true);
 
-    const result = await createEdital({
-      title,
-      submissionPeriodDays,
-      defaultCorrectionQuota,
-      cargos,
-      evaluationRubric,
-    });
-    if (!result.ok || !result.editalId) {
-      setError(result.ok ? "Edital criado, mas o ID não foi retornado." : result.message);
-      setPending(false);
-      return;
-    }
-
-    for (const draft of attachmentDrafts) {
-      const form = new FormData();
-      form.append("file", draft.file);
-      form.append("title", draft.title);
-      form.append("description", draft.description);
-      const upload = await fetch(`/api/editais/${result.editalId}/attachments`, {
-        method: "POST",
-        body: form,
+    let leavingPage = false;
+    try {
+      const result = await createEdital({
+        title,
+        submissionPeriodDays,
+        defaultCorrectionQuota,
+        cargos,
+        evaluationRubric,
       });
-      if (!upload.ok) {
-        const payload = (await upload.json().catch(() => null)) as { error?: string } | null;
-        setError(
-          payload?.error ??
-            `Edital criado, mas falhou ao enviar o anexo "${draft.title}". Você pode adicionar na página do edital.`,
-        );
-        setPending(false);
-        router.push(`/painel/admin/editais/${result.editalId}`);
+      if (!result.ok || !result.editalId) {
+        setError(result.ok ? "Edital criado, mas o ID não foi retornado." : result.message);
         return;
       }
-    }
 
-    router.push(`/painel/admin/editais/${result.editalId}`);
+      for (const draft of attachmentDrafts) {
+        const form = new FormData();
+        form.append("file", draft.file);
+        form.append("title", draft.title);
+        form.append("description", draft.description);
+        const upload = await fetch(`/api/editais/${result.editalId}/attachments`, {
+          method: "POST",
+          body: form,
+        });
+        if (!upload.ok) {
+          const payload = (await upload.json().catch(() => null)) as { error?: string } | null;
+          setError(
+            payload?.error ??
+              `Edital criado, mas falhou ao enviar o anexo "${draft.title}". Você pode adicionar na página do edital.`,
+          );
+          leavingPage = true;
+          router.push(`/painel/admin/editais/${result.editalId}`);
+          return;
+        }
+      }
+
+      leavingPage = true;
+      router.push(`/painel/admin/editais/${result.editalId}`);
+    } catch {
+      setError("Falha de comunicação ao criar o edital. Tente novamente.");
+    } finally {
+      if (!leavingPage) setPending(false);
+    }
   }
 
   function addAttachmentDraft() {

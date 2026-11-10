@@ -10,7 +10,7 @@ import { phasesForCreateCargo, validateCreateCargo } from "@/lib/editais/cargo-p
 import { normalizeKiwifyMappingQuota } from "@/lib/editais/enrollment-quota";
 import { normalizeSubmissionPeriodDays } from "@/lib/editais/member-phase-deadline";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
-import { sanitizePhaseDescriptionHtml } from "@/lib/rich-text/phase-description";
+import { sanitizePhaseDescriptionHtmlServer } from "@/lib/rich-text/sanitize-phase-description-server";
 import type { CreateEditalInput, PhaseInput } from "@/lib/editais/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -63,7 +63,7 @@ async function insertPhasesForCargo(
       activity_kind: activityKind,
       phase_number: phaseIndex + 1,
       title: phase.title.trim(),
-      description: sanitizePhaseDescriptionHtml(phase.description.trim()),
+      description: sanitizePhaseDescriptionHtmlServer(phase.description.trim()),
       deadline_at: null,
       updated_at: new Date().toISOString(),
     });
@@ -76,79 +76,90 @@ async function insertPhasesForCargo(
 }
 
 export async function createEdital(input: CreateEditalInput) {
-  const { profile } = await getCurrentProfile();
-  if (!requireAdmin(profile)) {
-    return { ok: false, message: "Acesso negado." };
-  }
+  try {
+    const { profile } = await getCurrentProfile();
+    if (!requireAdmin(profile)) {
+      return { ok: false, message: "Acesso negado." };
+    }
 
-  const title = input.title.trim();
-  if (title.length < 3) {
-    return { ok: false, message: "Informe o título do edital." };
-  }
+    const title = input.title.trim();
+    if (title.length < 3) {
+      return { ok: false, message: "Informe o título do edital." };
+    }
 
-  const cargoCheck = validateCreateCargos(input.cargos);
-  if (!cargoCheck.ok) {
-    return { ok: false, message: cargoCheck.message };
-  }
+    const cargoCheck = validateCreateCargos(input.cargos);
+    if (!cargoCheck.ok) {
+      return { ok: false, message: cargoCheck.message };
+    }
 
-  const rubricResult = prepareEvaluationRubric(input.evaluationRubric);
-  if (!rubricResult.ok) {
-    return { ok: false, message: rubricResult.message };
-  }
+    const rubricResult = prepareEvaluationRubric(input.evaluationRubric);
+    if (!rubricResult.ok) {
+      return { ok: false, message: rubricResult.message };
+    }
 
-  const submissionPeriodDays = normalizeSubmissionPeriodDays(input.submissionPeriodDays);
-  const defaultCorrectionQuota = normalizeKiwifyMappingQuota(input.defaultCorrectionQuota);
+    const submissionPeriodDays = normalizeSubmissionPeriodDays(input.submissionPeriodDays);
+    const defaultCorrectionQuota = normalizeKiwifyMappingQuota(input.defaultCorrectionQuota);
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  const { data: edital, error: editalError } = await supabase
-    .from("editais")
-    .insert({
-      title,
-      submission_period_days: submissionPeriodDays,
-      default_correction_quota: defaultCorrectionQuota,
-      evaluation_rubric: rubricResult.value,
-      updated_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-
-  if (editalError || !edital) {
-    return { ok: false, message: "Não foi possível criar o edital." };
-  }
-
-  for (const [cargoIndex, cargo] of input.cargos.entries()) {
-    const cargoName = cargo.name.trim().toUpperCase();
-
-    const { data: cargoRow, error: cargoError } = await supabase
-      .from("edital_cargos")
+    const { data: edital, error: editalError } = await supabase
+      .from("editais")
       .insert({
-        edital_id: edital.id,
-        name: cargoName,
-        offers_dissertativa: cargo.offersDissertativa,
-        offers_estudo_caso: cargo.offersEstudoCaso,
-        sort_order: cargoIndex,
+        title,
+        submission_period_days: submissionPeriodDays,
+        default_correction_quota: defaultCorrectionQuota,
+        evaluation_rubric: rubricResult.value,
+        updated_at: new Date().toISOString(),
       })
       .select("id")
       .single();
 
-    if (cargoError || !cargoRow) {
-      return { ok: false, message: "Não foi possível salvar os cargos." };
+    if (editalError || !edital) {
+      console.error("[createEdital] insert edital", editalError);
+      return { ok: false, message: "Não foi possível criar o edital." };
     }
 
-    for (const block of phasesForCreateCargo(cargo)) {
-      const phaseResult = await insertPhasesForCargo(
-        supabase,
-        cargoRow.id,
-        block.activityKind,
-        block.phases,
-      );
-      if (!phaseResult.ok) {
-        return { ok: false, message: phaseResult.message };
+    for (const [cargoIndex, cargo] of input.cargos.entries()) {
+      const cargoName = cargo.name.trim().toUpperCase();
+
+      const { data: cargoRow, error: cargoError } = await supabase
+        .from("edital_cargos")
+        .insert({
+          edital_id: edital.id,
+          name: cargoName,
+          offers_dissertativa: cargo.offersDissertativa,
+          offers_estudo_caso: cargo.offersEstudoCaso,
+          sort_order: cargoIndex,
+        })
+        .select("id")
+        .single();
+
+      if (cargoError || !cargoRow) {
+        console.error("[createEdital] insert cargo", cargoError);
+        return { ok: false, message: "Não foi possível salvar os cargos." };
+      }
+
+      for (const block of phasesForCreateCargo(cargo)) {
+        const phaseResult = await insertPhasesForCargo(
+          supabase,
+          cargoRow.id,
+          block.activityKind,
+          block.phases,
+        );
+        if (!phaseResult.ok) {
+          return { ok: false, message: phaseResult.message };
+        }
       }
     }
-  }
 
-  revalidatePath("/painel/admin/editais");
-  return { ok: true, message: "Edital criado com sucesso.", editalId: edital.id };
+    revalidatePath("/painel/admin/editais");
+    return { ok: true, message: "Edital criado com sucesso.", editalId: edital.id };
+  } catch (error) {
+    console.error("[createEdital] unexpected", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      message: detail || "Erro inesperado ao criar o edital.",
+    };
+  }
 }
