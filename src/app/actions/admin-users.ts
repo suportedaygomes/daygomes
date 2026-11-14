@@ -9,6 +9,7 @@ import {
   type UserRole,
 } from "@/lib/roles";
 import { sendAccessEmail } from "@/lib/email/send-access-email";
+import { deletePlatformUserPermanently } from "@/lib/admin/delete-platform-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type CreateUserInput = {
@@ -109,4 +110,28 @@ export async function createUserAsAdmin(input: CreateUserInput) {
       ? `Usuário criado. E-mail de acesso enviado para ${email}.`
       : `Usuário criado, mas o e-mail não foi enviado (${emailResult.error}). Senha inicial: ${DEFAULT_USER_PASSWORD}`,
   };
+}
+
+export async function deleteUserAsAdmin(targetUserId: string) {
+  const { user, profile } = await getCurrentProfile();
+
+  if (!user || !profile || profile.role !== "admin" || profile.banned) {
+    return { ok: false, message: "Acesso negado." };
+  }
+
+  const trimmedId = targetUserId.trim();
+  if (!trimmedId) {
+    return { ok: false, message: "Usuário inválido." };
+  }
+
+  const admin = createAdminClient();
+  const result = await deletePlatformUserPermanently(admin, trimmedId, user.id);
+
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+
+  revalidatePath("/painel/admin/usuarios");
+  revalidatePath("/painel/membros");
+  return { ok: true, message: "Usuário excluído permanentemente." };
 }

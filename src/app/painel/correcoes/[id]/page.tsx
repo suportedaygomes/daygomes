@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CorrectionForm } from "@/components/editais/correction-form";
 import { EditalAttachmentsPanel } from "@/components/editais/edital-attachments-panel";
+import { MemberEditalPriorGradesPanel } from "@/components/editais/member-edital-prior-grades-panel";
 import {
   listEditalAttachments,
   resolveEditalIdForSubmission,
@@ -12,6 +13,7 @@ import { MemberContactCard } from "@/components/painel/member-contact-card";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { loadCorrectionSubmissionForStaff } from "@/lib/corrector/load-correction-submission";
+import { loadMemberEditalPriorGrades } from "@/lib/corrector/member-edital-prior-grades";
 import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
 import { getStaffMemberContact } from "@/lib/members/staff-member-profile";
 import { correctionWhatsAppMessage } from "@/lib/support/whatsapp";
@@ -94,6 +96,10 @@ export default async function CorrecaoDetailPage({
 
   const editalId = await resolveEditalIdForSubmission(id);
   const editalAttachments = editalId ? await listEditalAttachments(editalId) : [];
+  const priorGrades =
+    editalId && submission.member_id
+      ? await loadMemberEditalPriorGrades(id, submission.member_id, editalId)
+      : null;
 
   const sub = access.submission;
   const canReleaseToQueue =
@@ -114,6 +120,7 @@ export default async function CorrecaoDetailPage({
           whatsappMessage={whatsappMessage}
         />
       ) : null}
+      {priorGrades ? <MemberEditalPriorGradesPanel prior={priorGrades} /> : null}
       <div>
         <CorrectionForm
           submissionId={id}

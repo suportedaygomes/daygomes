@@ -138,16 +138,14 @@ export function CorrectionForm({
       </div>
 
       {hasRubric && evaluationRubric ? (
-        <>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Descrição da correção (quesitos e notas)
-            <CorrectionRubricPanel
-              rubric={evaluationRubric}
-              scores={rubricScores}
-              onScoresChange={setRubricScores}
-            />
-          </label>
-        </>
+        <label className="flex flex-col gap-2 text-sm font-medium">
+          Descrição da correção (quesitos e notas)
+          <CorrectionRubricPanel
+            rubric={evaluationRubric}
+            scores={rubricScores}
+            onScoresChange={setRubricScores}
+          />
+        </label>
       ) : (
         <>
           <label className="flex flex-col gap-2 text-sm font-medium">

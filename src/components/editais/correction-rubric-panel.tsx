@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import type { EditalEvaluationRubric, RubricScores } from "@/lib/editais/evaluation-rubric";
-import { computeFinalGrade } from "@/lib/editais/evaluation-rubric";
+import { CorrectionRubricLiveResult } from "@/components/editais/correction-rubric-live-result";
 
 type Props = {
   rubric: EditalEvaluationRubric;
@@ -15,19 +14,6 @@ function formatRange(min: number, max: number) {
 }
 
 export function CorrectionRubricPanel({ rubric, scores, onScoresChange }: Props) {
-  const finalGrade = useMemo(() => {
-    try {
-      const complete = rubric.quesitos.every((q) => {
-        const v = scores[q.code];
-        return v !== undefined && Number.isFinite(Number(v));
-      });
-      if (!complete) return null;
-      return computeFinalGrade(rubric, scores);
-    } catch {
-      return null;
-    }
-  }, [rubric, scores]);
-
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm font-medium">Quesitos avaliativos</p>
@@ -36,8 +22,8 @@ export function CorrectionRubricPanel({ rubric, scores, onScoresChange }: Props)
           <thead>
             <tr className="border-b border-[color:var(--border-subtle)] bg-black/20 text-left">
               <th className="p-3 font-semibold">Quesito</th>
-              <th className="p-3 font-semibold w-32">Faixa de valor</th>
-              <th className="p-3 font-semibold w-28">Nota</th>
+              <th className="w-32 p-3 font-semibold">Faixa de valor</th>
+              <th className="w-28 p-3 font-semibold">Nota</th>
             </tr>
           </thead>
           <tbody>
@@ -88,27 +74,7 @@ export function CorrectionRubricPanel({ rubric, scores, onScoresChange }: Props)
         </table>
       </div>
 
-      <div className="rounded-xl border border-[color:var(--border-subtle)] p-4">
-        <p className="text-sm font-semibold">Passo 4 — Resultado</p>
-        <p className="mt-2 font-mono text-xs text-muted">{rubric.formula}</p>
-        <p className="mt-3 text-sm">
-          Nota final (0 a 1000):{" "}
-          <span className="text-lg font-semibold text-purple">
-            {finalGrade != null
-              ? finalGrade.toLocaleString("pt-BR", { maximumFractionDigits: 1 })
-              : "—"}
-          </span>
-        </p>
-        {rubric.minApprovalScore != null ? (
-          <p className="mt-2 text-xs text-muted">
-            Mínimo para aprovação:{" "}
-            {rubric.minApprovalScore.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
-            {rubric.approvalNote ? ` — ${rubric.approvalNote}` : ""}
-          </p>
-        ) : rubric.approvalNote ? (
-          <p className="mt-2 text-xs text-muted">{rubric.approvalNote}</p>
-        ) : null}
-      </div>
+      <CorrectionRubricLiveResult rubric={rubric} scores={scores} />
     </div>
   );
 }

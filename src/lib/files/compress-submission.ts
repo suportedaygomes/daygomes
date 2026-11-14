@@ -1,8 +1,8 @@
 import sharp from "sharp";
+import { MAX_SUBMISSION_UPLOAD_BYTES } from "@/lib/files/submission-upload-limits";
 
 const MAX_IMAGE_EDGE = 2400;
 const IMAGE_WEBP_QUALITY = 92;
-const MAX_OTHER_BYTES = 8 * 1024 * 1024;
 
 export type CompressedFile = {
   buffer: Buffer;
@@ -20,9 +20,10 @@ export async function compressSubmissionFile(
     return compressImage(bytes, mime);
   }
 
-  if (bytes.length > MAX_OTHER_BYTES) {
+  if (bytes.length > MAX_SUBMISSION_UPLOAD_BYTES) {
     return {
-      error: "Arquivo muito grande. Envie até 8 MB ou use imagem para compactação automática.",
+      error:
+        "Arquivo muito grande para enviar pela plataforma. Use até 4 MB (PDF/Word) ou envie uma foto que será compactada automaticamente.",
     };
   }
 

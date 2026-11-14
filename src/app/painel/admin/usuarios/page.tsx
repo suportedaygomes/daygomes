@@ -1,17 +1,17 @@
 import { redirect } from "next/navigation";
+import { AdminUsersTable, type AdminUserRow } from "@/components/painel/admin-users-table";
 import { CreateUserForm } from "@/components/painel/create-user-form";
 import { PainelPage } from "@/components/painel/painel-page";
-import { formatCpf } from "@/lib/cpf";
 import { getCurrentProfile } from "@/lib/auth/profile";
-import { ROLE_LABELS, type UserRole } from "@/lib/roles";
+import type { UserRole } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsuariosPage() {
-  const { profile } = await getCurrentProfile();
+  const { user, profile } = await getCurrentProfile();
 
-  if (!profile || profile.role !== "admin") {
+  if (!user || !profile || profile.role !== "admin") {
     redirect("/painel");
   }
 
@@ -21,40 +21,25 @@ export default async function AdminUsuariosPage() {
     .select("id, full_name, email, cpf, role, created_at")
     .order("created_at", { ascending: false });
 
+  const rows: AdminUserRow[] = (users ?? []).map((row) => ({
+    id: row.id,
+    full_name: row.full_name,
+    email: row.email,
+    cpf: row.cpf,
+    role: row.role as UserRole,
+  }));
+
   return (
     <PainelPage gap="lg" className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)] lg:gap-10">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight">Usuários</h1>
         <p className="mt-2 text-muted">
-          Cadastre membros, corretores ou outros administradores.
+          Cadastre membros, corretores ou administradores. A exclusão remove o login e os dados
+          vinculados do membro na plataforma.
         </p>
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-white/[0.04] text-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium">Nome</th>
-                <th className="px-4 py-3 font-medium">E-mail</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">CPF</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(users ?? []).map((row) => (
-                <tr key={row.id} className="border-t border-white/8">
-                  <td className="px-4 py-3 font-medium">{row.full_name || "—"}</td>
-                  <td className="px-4 py-3 text-muted">{row.email || "—"}</td>
-                  <td className="hidden px-4 py-3 text-muted sm:table-cell">
-                    {row.cpf ? formatCpf(row.cpf) : "—"}
-                  </td>
-                  <td className="px-4 py-3">{ROLE_LABELS[row.role as UserRole]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!users?.length ? (
-            <p className="px-4 py-6 text-sm text-muted">Nenhum usuário cadastrado ainda.</p>
-          ) : null}
+        <div className="mt-6">
+          <AdminUsersTable users={rows} currentAdminId={user.id} />
         </div>
       </section>
 

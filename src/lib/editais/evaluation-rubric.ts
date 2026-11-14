@@ -206,6 +206,62 @@ export function computeFinalGrade(
   return Math.round(clamped * 10) / 10;
 }
 
+export type RubricLivePreview =
+  | {
+      status: "incomplete";
+      filledCount: number;
+      totalCount: number;
+      missingTitles: string[];
+    }
+  | { status: "invalid"; message: string }
+  | {
+      status: "ready";
+      finalGrade: number;
+      approval: "approved" | "failed" | "no_threshold";
+    };
+
+/** Prévia em tempo real para o corretor (antes de salvar). */
+export function getRubricLivePreview(
+  rubric: EditalEvaluationRubric,
+  scores: RubricScores,
+): RubricLivePreview {
+  const totalCount = rubric.quesitos.length;
+  const missingTitles: string[] = [];
+
+  for (const q of rubric.quesitos) {
+    const value = scores[q.code];
+    if (value === undefined || !Number.isFinite(Number(value))) {
+      missingTitles.push(q.title);
+    }
+  }
+
+  const filledCount = totalCount - missingTitles.length;
+  if (missingTitles.length > 0) {
+    return { status: "incomplete", filledCount, totalCount, missingTitles };
+  }
+
+  const check = validateRubricScores(rubric, scores);
+  if (!check.ok) {
+    return { status: "invalid", message: check.message };
+  }
+
+  try {
+    const finalGrade = computeFinalGrade(rubric, check.normalized);
+    let approval: "approved" | "failed" | "no_threshold";
+    if (rubric.minApprovalScore != null) {
+      approval = finalGrade >= rubric.minApprovalScore ? "approved" : "failed";
+    } else {
+      approval = "no_threshold";
+    }
+    return { status: "ready", finalGrade, approval };
+  } catch {
+    return {
+      status: "invalid",
+      message: "Não foi possível calcular a nota. Confira os valores e a fórmula do edital.",
+    };
+  }
+}
+
 export function buildRubricFeedbackSummary(
   rubric: EditalEvaluationRubric,
   scores: RubricScores,

@@ -24,6 +24,8 @@ async function launchBrowser() {
   });
 }
 
+const CONVERSION_BUDGET_MS = 45_000;
+
 async function convertViaGotenberg(buffer: Buffer, filename: string) {
   const baseUrl = process.env.GOTENBERG_URL?.trim();
   if (!baseUrl) return null;
@@ -34,19 +36,45 @@ async function convertViaGotenberg(buffer: Buffer, filename: string) {
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/forms/libreoffice/convert`, {
     method: "POST",
     body: form,
+    signal: AbortSignal.timeout(25_000),
   });
 
   if (!response.ok) return null;
   return Buffer.from(await response.arrayBuffer());
 }
 
+function conversionDeadline() {
+  return Date.now() + CONVERSION_BUDGET_MS;
+}
+
+function conversionTimedOut(deadlineMs: number) {
+  return Date.now() >= deadlineMs;
+}
+
 export async function convertOfficeBufferToPdf(
   buffer: Buffer,
   filename: string,
 ): Promise<{ ok: true; pdf: Buffer } | { ok: false; error: string }> {
+  const deadline = conversionDeadline();
   const fromGotenberg = await convertViaGotenberg(buffer, filename);
   if (fromGotenberg) {
     return { ok: true, pdf: fromGotenberg };
+  }
+
+  if (conversionTimedOut(deadline)) {
+    return {
+      ok: false,
+      error:
+        "A conversão do Word demorou demais. Salve o arquivo como PDF no computador ou celular e envie o PDF.",
+    };
+  }
+
+  if (process.env.VERCEL && !process.env.GOTENBERG_URL?.trim()) {
+    return {
+      ok: false,
+      error:
+        "Não foi possível converter o Word aqui. Exporte como PDF (Arquivo → Salvar como PDF) e envie o PDF.",
+    };
   }
 
   try {
@@ -64,17 +92,29 @@ export async function convertOfficeBufferToPdf(
 <body>${html}</body>
 </html>`;
 
-    const browser = await launchBrowser();
-    const page = await browser.newPage();
-    await page.setContent(documentHtml, { waitUntil: "load" });
-    const pdf = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "16mm", right: "14mm", bottom: "16mm", left: "14mm" },
-    });
-    await browser.close();
+    if (conversionTimedOut(deadline)) {
+      return {
+        ok: false,
+        error:
+          "A conversão do Word demorou demais. Salve como PDF e envie o PDF.",
+      };
+    }
 
-    return { ok: true, pdf: Buffer.from(pdf) };
+    const browser = await launchBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(documentHtml, { waitUntil: "load", timeout: 15_000 });
+      const pdf = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "16mm", right: "14mm", bottom: "16mm", left: "14mm" },
+        timeout: 15_000,
+      });
+
+      return { ok: true, pdf: Buffer.from(pdf) };
+    } finally {
+      await browser.close().catch(() => undefined);
+    }
   } catch (error) {
     const message =
       error instanceof Error

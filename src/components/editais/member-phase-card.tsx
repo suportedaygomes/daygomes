@@ -6,6 +6,11 @@ import { MembroCorrecaoCardActions } from "@/components/editais/membro-correcao-
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
 import { MemberPhaseStatusBadge } from "@/components/editais/member-phase-status-badge";
 import { themeLabel } from "@/lib/editais/theme-label";
+import { compressImageFileForUpload } from "@/lib/files/client-compress-image";
+import {
+  MAX_SUBMISSION_UPLOAD_BYTES,
+  MAX_SUBMISSION_UPLOAD_LABEL,
+} from "@/lib/files/submission-upload-limits";
 
 type SubmissionStatus = "enviado" | "em_correcao" | "corrigido" | null;
 
@@ -76,27 +81,71 @@ export function MemberPhaseCard({
     setMessage("");
     setPending(true);
 
-    const body = new FormData();
-    body.append("enrollmentId", enrollmentId);
-    body.append("phaseId", phaseId);
-    body.append("file", file);
+    let leavingPage = false;
+    try {
+      let uploadFile = file;
+      try {
+        uploadFile = await compressImageFileForUpload(file);
+      } catch (compressError) {
+        setError(
+          compressError instanceof Error
+            ? compressError.message
+            : "Não foi possível preparar a imagem para envio.",
+        );
+        return;
+      }
 
-    const response = await fetch("/api/submissions/upload", {
-      method: "POST",
-      body,
-    });
+      if (!uploadFile.type.startsWith("image/") && uploadFile.size > MAX_SUBMISSION_UPLOAD_BYTES) {
+        setError(
+          `Este arquivo passa de ${MAX_SUBMISSION_UPLOAD_LABEL}. Reduza o PDF ou Word, ou fotografe a redação e envie como imagem.`,
+        );
+        return;
+      }
 
-    const data = (await response.json()) as { error?: string; message?: string };
-    if (!response.ok) {
-      setError(data.error ?? "Não foi possível enviar.");
-      setPending(false);
-      return;
+      const body = new FormData();
+      body.append("enrollmentId", enrollmentId);
+      body.append("phaseId", phaseId);
+      body.append("file", uploadFile);
+
+      const response = await fetch("/api/submissions/upload", {
+        method: "POST",
+        body,
+        signal: AbortSignal.timeout(120_000),
+      });
+
+      let data: { error?: string; message?: string } = {};
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        data = (await response.json()) as { error?: string; message?: string };
+      } else if (!response.ok) {
+        data = {
+          error:
+            response.status === 413
+              ? `Arquivo grande demais (máx. ${MAX_SUBMISSION_UPLOAD_LABEL}).`
+              : "O servidor demorou ou recusou o envio. Tente de novo em instantes.",
+        };
+      }
+
+      if (!response.ok) {
+        setError(data.error ?? "Não foi possível enviar.");
+        return;
+      }
+
+      setMessage(data.message ?? "Enviado.");
+      setFile(null);
+      leavingPage = true;
+      window.location.reload();
+    } catch (uploadError) {
+      if (uploadError instanceof DOMException && uploadError.name === "TimeoutError") {
+        setError(
+          "O envio demorou demais. Verifique sua internet e tente de novo — se já aparecer “enviado” ao atualizar a página, não reenvie.",
+        );
+      } else {
+        setError("Falha de conexão ao enviar. Tente novamente.");
+      }
+    } finally {
+      if (!leavingPage) setPending(false);
     }
-
-    setMessage(data.message ?? "Enviado.");
-    setFile(null);
-    setPending(false);
-    window.location.reload();
   }
 
   const phaseForBadge = {
@@ -179,7 +228,8 @@ export function MemberPhaseCard({
         </p>
       ) : null}
       <p className="text-xs text-muted">
-        Envie imagem, PDF ou Word (.docx). Documentos viram PDF para o corretor marcar. Até 8 MB.
+        Envie imagem, PDF ou Word (.docx). Fotos grandes são compactadas automaticamente. PDF e Word:
+        até {MAX_SUBMISSION_UPLOAD_LABEL}.
       </p>
 
       {showCorrection ? (
