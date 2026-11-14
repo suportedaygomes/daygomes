@@ -169,6 +169,87 @@ function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** Avalia expressão aritmética sem eval/Function (compatível com CSP no navegador). */
+function safeEvaluateArithmeticExpression(source: string): number {
+  const expr = source.replace(/\s+/g, "");
+  if (!expr.length) throw new Error("Expressão vazia.");
+
+  let index = 0;
+
+  function peek() {
+    return expr[index] ?? "";
+  }
+
+  function consume(expected?: string) {
+    if (expected && expr[index] !== expected) {
+      throw new Error("Expressão inválida.");
+    }
+    index += 1;
+  }
+
+  function parseNumber(): number {
+    const start = index;
+    if (peek() === "+" || peek() === "-") {
+      index += 1;
+    }
+    while (/[\d.]/.test(peek())) {
+      index += 1;
+    }
+    const raw = expr.slice(start, index);
+    if (!raw.length || raw === "+" || raw === "-") {
+      throw new Error("Número esperado.");
+    }
+    const num = Number(raw);
+    if (!Number.isFinite(num)) throw new Error("Número inválido.");
+    return num;
+  }
+
+  function parseFactor(): number {
+    if (peek() === "(") {
+      consume("(");
+      const value = parseExpression();
+      if (peek() !== ")") throw new Error("Parêntese não fechado.");
+      consume(")");
+      return value;
+    }
+    if (peek() === "+" || peek() === "-" || /\d/.test(peek())) {
+      return parseNumber();
+    }
+    throw new Error("Fator inválido.");
+  }
+
+  function parseTerm(): number {
+    let value = parseFactor();
+    while (peek() === "*" || peek() === "/") {
+      const op = peek();
+      consume(op);
+      const right = parseFactor();
+      if (op === "*") value *= right;
+      else {
+        if (right === 0) throw new Error("Divisão por zero.");
+        value /= right;
+      }
+    }
+    return value;
+  }
+
+  function parseExpression(): number {
+    let value = parseTerm();
+    while (peek() === "+" || peek() === "-") {
+      const op = peek();
+      consume(op);
+      const right = parseTerm();
+      value = op === "+" ? value + right : value - right;
+    }
+    return value;
+  }
+
+  const result = parseExpression();
+  if (index !== expr.length) throw new Error("Caracteres extras na fórmula.");
+  if (!Number.isFinite(result)) throw new Error("Resultado inválido.");
+  return result;
+}
+
 /** Avalia a fórmula com os códigos dos quesitos já substituídos por números. */
 export function evaluateRubricFormula(formula: string, scores: RubricScores): number {
   let expr = formula.trim();
@@ -178,7 +259,7 @@ export function evaluateRubricFormula(formula: string, scores: RubricScores): nu
   const sortedCodes = Object.keys(scores).sort((a, b) => b.length - a.length);
   for (const code of sortedCodes) {
     const re = new RegExp(`\\b${escapeRegExp(code)}\\b`, "gi");
-    expr = expr.replace(re, `(${scores[code]})`);
+    expr = expr.replace(re, String(scores[code]));
   }
 
   if (/[a-zA-Z_]/.test(expr)) {
@@ -189,12 +270,8 @@ export function evaluateRubricFormula(formula: string, scores: RubricScores): nu
     throw new Error("Caracteres não permitidos na fórmula.");
   }
 
-  const result = Function(`"use strict"; return (${expr});`)();
-  const num = Number(result);
-  if (!Number.isFinite(num)) {
-    throw new Error("Resultado inválido.");
-  }
-  return Math.round(num * 1000) / 1000;
+  const result = safeEvaluateArithmeticExpression(expr);
+  return Math.round(result * 1000) / 1000;
 }
 
 export function computeFinalGrade(

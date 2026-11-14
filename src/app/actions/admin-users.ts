@@ -133,5 +133,6 @@ export async function deleteUserAsAdmin(targetUserId: string) {
 
   revalidatePath("/painel/admin/usuarios");
   revalidatePath("/painel/membros");
+  revalidatePath(`/painel/membros/${trimmedId}`);
   return { ok: true, message: "Usuário excluído permanentemente." };
 }

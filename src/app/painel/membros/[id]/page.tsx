@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MemberContactCard } from "@/components/painel/member-contact-card";
+import { DeletePlatformUserButton } from "@/components/painel/delete-platform-user-button";
 import { ResendMemberAccessButton } from "@/components/painel/resend-member-access-button";
 import { StaffMemberEnrollmentsPanel } from "@/components/painel/staff-member-enrollments-panel";
 import { PainelPage } from "@/components/painel/painel-page";
@@ -19,7 +20,7 @@ export default async function StaffMembroDetailPage({
   params,
 }: PageProps<"/painel/membros/[id]">) {
   const { id } = await params;
-  const { profile } = await getCurrentProfile();
+  const { user, profile } = await getCurrentProfile();
   if (!profile || !isStaffRole(profile.role)) {
     redirect("/painel");
   }
@@ -60,6 +61,24 @@ export default async function StaffMembroDetailPage({
           </p>
           <div className="mt-4">
             <ResendMemberAccessButton memberId={member.id} memberEmail={member.email} />
+          </div>
+        </section>
+      ) : null}
+
+      {profile.role === "admin" && user ? (
+        <section className="panel-card border-red-400/20">
+          <h2 className="text-lg font-semibold text-red-200">Excluir membro</h2>
+          <p className="mt-1 text-sm text-muted">
+            Remove o login e os dados deste aluno na plataforma. Use quando a conta foi criada por
+            engano ou o aluno não deve mais acessar o sistema.
+          </p>
+          <div className="mt-4">
+            <DeletePlatformUserButton
+              userId={member.id}
+              displayName={member.full_name?.trim() || member.email || "Membro"}
+              currentAdminId={user.id}
+              redirectTo="/painel/membros"
+            />
           </div>
         </section>
       ) : null}

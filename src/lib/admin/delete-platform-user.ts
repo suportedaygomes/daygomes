@@ -60,6 +60,34 @@ export async function deletePlatformUserPermanently(
     }
   }
 
+  const { error: remindersError } = await admin
+    .from("phase_submission_reminders")
+    .delete()
+    .eq("member_id", targetUserId);
+
+  if (remindersError) {
+    console.error("[deletePlatformUser] reminders", remindersError.message);
+    return { ok: false, message: "Não foi possível remover os lembretes do usuário." };
+  }
+
+  const { data: enrollmentRows } = await admin
+    .from("member_edital_enrollments")
+    .select("id")
+    .eq("member_id", targetUserId);
+
+  const enrollmentIds = (enrollmentRows ?? []).map((row) => row.id);
+  if (enrollmentIds.length) {
+    const { error: chargesError } = await admin
+      .from("enrollment_correction_quota_charges")
+      .delete()
+      .in("enrollment_id", enrollmentIds);
+
+    if (chargesError) {
+      console.error("[deletePlatformUser] quota charges", chargesError.message);
+      return { ok: false, message: "Não foi possível remover o histórico de cotas do usuário." };
+    }
+  }
+
   const { error: submissionsError } = await admin
     .from("phase_submissions")
     .delete()

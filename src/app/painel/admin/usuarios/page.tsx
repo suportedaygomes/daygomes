@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { AdminUsersTable, type AdminUserRow } from "@/components/painel/admin-users-table";
+import { AdminUsersTable } from "@/components/painel/admin-users-table";
+import type { AdminUserRow } from "@/components/painel/admin-users-table.types";
 import { CreateUserForm } from "@/components/painel/create-user-form";
 import { PainelPage } from "@/components/painel/painel-page";
 import { getCurrentProfile } from "@/lib/auth/profile";
