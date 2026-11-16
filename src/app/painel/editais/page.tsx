@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { MemberEditaisView, type MemberEnrollmentView } from "@/components/editais/member-editais-view";
 import { PainelPage } from "@/components/painel/painel-page";
-import { getAvatarPublicUrl, getCurrentProfile } from "@/lib/auth/profile";
-import { getCorrectorPublicProfilesByIds } from "@/lib/corrector/batch-public-profiles";
+import { getCurrentProfile } from "@/lib/auth/profile";
 import type { ActivityKind } from "@/lib/editais/activity-kind";
 import { cargoDisplayName } from "@/lib/editais/activity-kind";
 import { listEditalAttachmentsByEditalIds } from "@/lib/editais/attachments";
@@ -18,7 +17,6 @@ import {
   resolveMemberPhaseDeadlineAt,
 } from "@/lib/editais/member-phase-deadline";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +28,6 @@ export default async function MembroEditaisPage() {
 
   const supabase = await createClient();
   const admin = createAdminClient();
-  const { url: supabaseUrl } = getSupabasePublicEnv();
   const { data: enrollments } = await supabase
     .from("member_edital_enrollments")
     .select("id, edital_id, correction_quota, created_at, editais(title, submission_period_days)")
@@ -77,17 +74,13 @@ export default async function MembroEditaisPage() {
       ? await admin
           .from("phase_corrections")
           .select(
-            "submission_id, grade, feedback, errors_notes, allow_resubmit, resubmit_charges_quota, corrector_id",
+            "submission_id, grade, feedback, errors_notes, allow_resubmit, resubmit_charges_quota",
           )
           .in("submission_id", submissionIds)
       : { data: [] };
 
     const correctionBySubmission = new Map(
       (corrections ?? []).map((item) => [item.submission_id, item]),
-    );
-
-    const correctorProfiles = await getCorrectorPublicProfilesByIds(
-      (corrections ?? []).map((item) => item.corrector_id).filter(Boolean) as string[],
     );
 
     const submissionPeriodDays = normalizeSubmissionPeriodDays(edital?.submission_period_days);
@@ -120,10 +113,6 @@ export default async function MembroEditaisPage() {
             const correction = submission
               ? correctionBySubmission.get(submission.id)
               : null;
-            const correctorProfile = correction?.corrector_id
-              ? correctorProfiles.get(correction.corrector_id)
-              : null;
-
             const quotaBlocksNewUpload =
               !submission && remaining <= 0 && !correction?.allow_resubmit;
 
@@ -149,14 +138,6 @@ export default async function MembroEditaisPage() {
                     grade: parseSubmissionGrade(correction.grade),
                     feedback: correction.feedback,
                     errorsNotes: correction.errors_notes,
-                    correctorId: correction.corrector_id,
-                  }
-                : null,
-              corrector: correctorProfile
-                ? {
-                    fullName: correctorProfile.fullName,
-                    avatarUrl: getAvatarPublicUrl(supabaseUrl, correctorProfile.avatarPath),
-                    bio: correctorProfile.bio,
                   }
                 : null,
             };

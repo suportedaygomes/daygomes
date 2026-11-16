@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { CorrectorPublicInline } from "@/components/editais/corrector-public-inline";
 import { MembroCorrecaoCardActions } from "@/components/editais/membro-correcao-actions";
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
 import { MemberPhaseStatusBadge } from "@/components/editais/member-phase-status-badge";
@@ -31,11 +30,6 @@ type MemberPhaseCardProps = {
     feedback: string;
     errorsNotes: string;
   } | null;
-  corrector?: {
-    fullName: string;
-    avatarUrl: string | null;
-    bio: string | null;
-  } | null;
   trackLabel?: string;
   defaultCollapsed?: boolean;
 };
@@ -53,7 +47,6 @@ export function MemberPhaseCard({
   resubmitChargesQuota = false,
   quotaBlocksNewUpload = false,
   correction,
-  corrector,
   trackLabel,
   defaultCollapsed = false,
 }: MemberPhaseCardProps) {
@@ -239,17 +232,9 @@ export function MemberPhaseCard({
           <p className="mt-2">
             <strong>Comentários técnicos do professor:</strong> {correction.errorsNotes || "—"}
           </p>
-          {corrector ? (
-            <CorrectorPublicInline
-              fullName={corrector.fullName}
-              avatarUrl={corrector.avatarUrl}
-              bio={corrector.bio}
-            />
-          ) : (
-            <p className="mt-3 border-t border-white/10 pt-3 text-xs text-muted">
-              Corrigido pela equipe da Professora Day Gomes
-            </p>
-          )}
+          <p className="mt-3 border-t border-white/10 pt-3 text-xs text-muted">
+            Corrigido pela equipe da Professora Day Gomes
+          </p>
           {submissionId ? <MembroCorrecaoCardActions submissionId={submissionId} /> : null}
         </div>
       ) : null}

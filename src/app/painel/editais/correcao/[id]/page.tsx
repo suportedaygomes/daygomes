@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CorrectorPublicCard } from "@/components/editais/corrector-public-card";
 import { PainelPage } from "@/components/painel/painel-page";
 import { MembroCorrecaoActions } from "@/components/editais/membro-correcao-actions";
 import { SubmissionMarkupViewer } from "@/components/editais/submission-markup-viewer";
-import { getAvatarPublicUrl, getCurrentProfile } from "@/lib/auth/profile";
+import { getCurrentProfile } from "@/lib/auth/profile";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
 import { themeLabel } from "@/lib/editais/theme-label";
-import { getCorrectorPublicProfile } from "@/lib/corrector/public-profile";
-import { getSupabasePublicEnv } from "@/lib/supabase/env";
 import type { MarkupAnnotation } from "@/lib/markup/types";
 import { getAnnotatorViewerMode } from "@/lib/submissions/access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -55,15 +52,9 @@ export default async function MembroCorrecaoDetalhePage({
   const admin = createAdminClient();
   const { data: correction } = await admin
     .from("phase_corrections")
-    .select("grade, feedback, errors_notes, corrector_id")
+    .select("grade, feedback, errors_notes")
     .eq("submission_id", id)
     .maybeSingle();
-
-  const corrector = await getCorrectorPublicProfile(correction?.corrector_id);
-  const { url: supabaseUrl } = getSupabasePublicEnv();
-  const correctorAvatarUrl = corrector
-    ? getAvatarPublicUrl(supabaseUrl, corrector.avatarPath)
-    : null;
 
   const { data: markups } = await supabase
     .from("submission_markups")
@@ -90,10 +81,6 @@ export default async function MembroCorrecaoDetalhePage({
           {phase?.phase_number != null ? ` · ${themeLabel(phase.phase_number)}` : ""}
         </p>
       </div>
-
-      {corrector ? (
-        <CorrectorPublicCard corrector={corrector} avatarUrl={correctorAvatarUrl} />
-      ) : null}
 
       <section className="panel-card flex flex-col gap-3 text-sm">
         <p>

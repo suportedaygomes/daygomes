@@ -29,12 +29,6 @@ export type MemberPhaseView = {
     grade: number | null;
     feedback: string;
     errorsNotes: string;
-    correctorId: string | null;
-  } | null;
-  corrector: {
-    fullName: string;
-    avatarUrl: string | null;
-    bio: string | null;
   } | null;
 };
 
@@ -272,7 +266,6 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                   resubmitChargesQuota={phase.resubmitChargesQuota}
                   quotaBlocksNewUpload={phase.quotaBlocksNewUpload}
                   correction={phase.correction}
-                  corrector={phase.corrector}
                   trackLabel={phase.trackLabel}
                   defaultCollapsed
                 />
@@ -408,7 +401,6 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                   resubmitChargesQuota={pickerPhase.resubmitChargesQuota}
                   quotaBlocksNewUpload={pickerPhase.quotaBlocksNewUpload}
                   correction={pickerPhase.correction}
-                  corrector={pickerPhase.corrector}
                   trackLabel={pickerPhase.trackLabel}
                 />
               ) : (
@@ -427,7 +419,6 @@ function EnrollmentWorkspace({ enrollment }: { enrollment: MemberEnrollmentView 
                     resubmitChargesQuota={phase.resubmitChargesQuota}
                     quotaBlocksNewUpload={phase.quotaBlocksNewUpload}
                     correction={phase.correction}
-                    corrector={phase.corrector}
                     trackLabel={phase.trackLabel}
                     defaultCollapsed={
                       classifyMemberPhase(phase) === "corrected" && manyPhases
