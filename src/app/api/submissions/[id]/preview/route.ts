@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
-import { normalizeImageRotation } from "@/lib/markup/image-rotation";
+import { rotateDocumentBuffer } from "@/lib/markup/rotate-document-buffer";
 import { getR2ObjectStream } from "@/lib/r2/storage";
-import { getSubmissionForUser, getSubmissionPreviewPath } from "@/lib/submissions/access";
+import {
+  getSubmissionForUser,
+  getSubmissionPreviewPath,
+} from "@/lib/submissions/access";
+import {
+  isRotatablePreview,
+  resolveSubmissionPreviewRotation,
+} from "@/lib/submissions/preview-rotation";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -31,23 +37,14 @@ export async function GET(_request: Request, context: RouteContext) {
       ? submission.storage_path
       : getSubmissionPreviewPath(submission);
 
-  const isImage = Boolean(submission.mime_type?.startsWith("image/"));
-  let rotation = normalizeImageRotation(url.searchParams.get("r"));
-  if (isImage && !url.searchParams.has("r")) {
-    const { data: markup } = await supabase
-      .from("submission_markups")
-      .select("image_rotation")
-      .eq("submission_id", id)
-      .maybeSingle();
-    rotation = normalizeImageRotation(markup?.image_rotation);
-  }
+  const rotatable = isRotatablePreview(submission.mime_type, path);
+  const rotation = await resolveSubmissionPreviewRotation(supabase, id, url, rotatable);
 
   async function respondWithBytes(raw: Buffer, contentType: string) {
     let body = raw;
     let outputType = contentType;
-    if (isImage && rotation !== 0) {
-      body = await sharp(raw, { failOn: "none" }).rotate(rotation).toBuffer();
-      outputType = contentType || "image/jpeg";
+    if (rotation !== 0) {
+      body = await rotateDocumentBuffer(raw, contentType, rotation);
     }
     return new NextResponse(new Uint8Array(body), {
       headers: {
@@ -66,7 +63,7 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const bytes = await object.body.transformToByteArray();
-  const contentType =
+    const contentType =
       path.endsWith(".pdf") || submission.mime_type === "application/pdf"
         ? "application/pdf"
         : submission.mime_type ?? object.contentType;

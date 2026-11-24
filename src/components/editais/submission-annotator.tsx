@@ -145,7 +145,7 @@ export function SubmissionAnnotator({
   const [activePreviewUrl, setActivePreviewUrl] = useState(previewUrl);
   const [imageRotation, setImageRotation] = useState<ImageRotation>(0);
 
-  const imagePreviewUrl = addPreviewRotationParam(activePreviewUrl, imageRotation);
+  const previewWithRotation = addPreviewRotationParam(activePreviewUrl, imageRotation);
 
   useEffect(() => {
     setActivePreviewUrl(previewUrl);
@@ -174,7 +174,7 @@ export function SubmissionAnnotator({
 
     void (async () => {
       try {
-        const response = await fetch(activePreviewUrl, { credentials: "include" });
+        const response = await fetch(previewWithRotation, { credentials: "include" });
         if (!response.ok) {
           if (
             fallbackPreviewUrl &&
@@ -222,7 +222,7 @@ export function SubmissionAnnotator({
     return () => {
       cancelled = true;
     };
-  }, [activePreviewUrl, fallbackPreviewUrl, viewerMode]);
+  }, [activePreviewUrl, fallbackPreviewUrl, previewWithRotation, viewerMode]);
 
   const relativePoint = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const el = event.currentTarget;
@@ -305,7 +305,7 @@ export function SubmissionAnnotator({
       setPending(false);
       return;
     }
-    setMessage("As marcações foram salvas com sucesso.");
+    setMessage("Marcações e rotação da página salvas com sucesso.");
     setPending(false);
   }
 
@@ -361,7 +361,7 @@ export function SubmissionAnnotator({
           pending={pending}
           onColorChange={setColor}
           onSave={saveMarkups}
-          showImageRotate={viewerMode === "image"}
+          showImageRotate={viewerMode === "image" || viewerMode === "pdf"}
           onRotateLeft={() => rotateImage(-90)}
           onRotateRight={() => rotateImage(90)}
         />
@@ -373,7 +373,7 @@ export function SubmissionAnnotator({
             {viewerMode === "image" ? (
               <MarkupOverlay page={1} {...overlayProps}>
                 <img
-                  src={imagePreviewUrl}
+                  src={previewWithRotation}
                   alt="Envio do aluno"
                   className="pointer-events-none block h-auto w-full max-w-full"
                   draggable={false}
@@ -391,7 +391,7 @@ export function SubmissionAnnotator({
                     <p className="mb-2 text-xs font-semibold text-muted">Página {page}</p>
                     <MarkupOverlay page={page} {...overlayProps}>
                       <SubmissionPdfEmbedPage
-                        previewUrl={activePreviewUrl}
+                        previewUrl={previewWithRotation}
                         page={page}
                         title={`Redação enviada — página ${page}`}
                       />

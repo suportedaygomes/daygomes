@@ -4,6 +4,7 @@ import {
   looksLikePhaseDescriptionHtml,
   phaseDescriptionPlainText,
 } from "@/lib/rich-text/phase-description-plain";
+import { stripDangerousPhaseDescriptionHtml } from "@/lib/rich-text/strip-dangerous-html";
 
 export { isPhaseDescriptionEmpty, looksLikePhaseDescriptionHtml, phaseDescriptionPlainText };
 
@@ -123,7 +124,7 @@ export function normalizePhaseDescriptionForDisplay(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "";
   if (looksLikePhaseDescriptionHtml(trimmed)) {
-    return sanitizePhaseDescriptionHtml(trimmed);
+    return stripDangerousPhaseDescriptionHtml(trimmed);
   }
   const escaped = trimmed
     .replace(/&/g, "&amp;")

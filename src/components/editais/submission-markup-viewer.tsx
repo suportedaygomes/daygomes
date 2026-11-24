@@ -134,7 +134,7 @@ export function SubmissionMarkupViewer({
   annotations,
   imageRotation = 0,
 }: SubmissionMarkupViewerProps) {
-  const imagePreviewUrl = addPreviewRotationParam(previewUrl, imageRotation);
+  const previewWithRotation = addPreviewRotationParam(previewUrl, imageRotation);
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -163,7 +163,7 @@ export function SubmissionMarkupViewer({
 
     void (async () => {
       try {
-        const response = await fetch(previewUrl, { credentials: "include" });
+        const response = await fetch(previewWithRotation, { credentials: "include" });
         if (!response.ok) {
           setPdfError("Não foi possível carregar o PDF corrigido.");
           return;
@@ -192,7 +192,7 @@ export function SubmissionMarkupViewer({
     return () => {
       cancelled = true;
     };
-  }, [previewUrl, viewerMode]);
+  }, [previewUrl, previewWithRotation, viewerMode]);
 
   return (
     <div className={`flex flex-col gap-6 ${activeItem ? "pb-36 sm:pb-40" : ""}`}>
@@ -212,7 +212,7 @@ export function SubmissionMarkupViewer({
             onSelect={selectMarkup}
           >
             <img
-              src={imagePreviewUrl}
+              src={previewWithRotation}
               alt="Sua atividade corrigida"
               className="block h-auto w-full"
             />
@@ -234,7 +234,7 @@ export function SubmissionMarkupViewer({
                   onSelect={selectMarkup}
                 >
                   <SubmissionPdfEmbedPage
-                    previewUrl={previewUrl}
+                    previewUrl={previewWithRotation}
                     page={page}
                     title={`Atividade corrigida — página ${page}`}
                   />

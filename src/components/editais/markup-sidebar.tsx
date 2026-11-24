@@ -80,6 +80,7 @@ export function MarkupToolbar({
           className="btn-secondary h-10 px-2.5 text-xs"
           disabled={pending}
           onClick={onRotateLeft}
+          title="Girar 90° para a esquerda"
         >
           Girar ↺
         </button>
@@ -88,6 +89,7 @@ export function MarkupToolbar({
           className="btn-secondary h-10 px-2.5 text-xs"
           disabled={pending}
           onClick={onRotateRight}
+          title="Girar 90° para a direita"
         >
           Girar ↻
         </button>

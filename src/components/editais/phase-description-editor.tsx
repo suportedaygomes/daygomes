@@ -6,6 +6,7 @@ import {
   normalizePhaseDescriptionForDisplay,
   sanitizePhaseDescriptionHtml,
 } from "@/lib/rich-text/phase-description";
+import { stripDangerousPhaseDescriptionHtml } from "@/lib/rich-text/strip-dangerous-html";
 
 type Props = {
   value: string;
@@ -192,7 +193,7 @@ export function PhaseDescriptionEditor({
     const el = editorRef.current;
     if (!el) return;
     cleanupEmptyBlocks(el);
-    const sanitized = sanitizePhaseDescriptionHtml(el.innerHTML);
+    const sanitized = stripDangerousPhaseDescriptionHtml(el.innerHTML);
     lastValueRef.current = sanitized;
     onChange(sanitized);
   }, [onChange]);

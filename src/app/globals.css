@@ -647,7 +647,11 @@ html:not([data-theme="light"]) .text-action-danger:hover {
 }
 
 .phase-description-prose strong,
-.phase-description-prose b {
+.phase-description-prose b,
+.phase-description-prose [style*="font-weight: bold"],
+.phase-description-prose [style*="font-weight:bold"],
+.phase-description-prose [style*="font-weight: 700"],
+.phase-description-prose [style*="font-weight:700"] {
   font-weight: 700;
   color: var(--foreground);
 }
