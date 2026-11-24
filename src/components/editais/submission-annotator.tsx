@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, type PointerEvent } from "react";
 import { MarkupSidebar, MarkupToolbar } from "@/components/editais/markup-sidebar";
-import { SubmissionPdfEmbedPage } from "@/components/editais/submission-pdf-embed-page";
+import { SubmissionPdfPage } from "@/components/editais/submission-pdf-page";
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
 import { isPhaseDescriptionEmpty } from "@/lib/rich-text/phase-description-plain";
 import {
@@ -142,6 +142,7 @@ export function SubmissionAnnotator({
   const [loaded, setLoaded] = useState(false);
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
+  const [imageLoadError, setImageLoadError] = useState("");
   const [activePreviewUrl, setActivePreviewUrl] = useState(previewUrl);
   const [imageRotation, setImageRotation] = useState<ImageRotation>(0);
 
@@ -151,6 +152,7 @@ export function SubmissionAnnotator({
     setActivePreviewUrl(previewUrl);
     setPdfPages(0);
     setPdfError("");
+    setImageLoadError("");
   }, [previewUrl]);
 
   useEffect(() => {
@@ -371,14 +373,23 @@ export function SubmissionAnnotator({
         <div className="min-w-0 border-[color:var(--border-subtle)] bg-field/30 p-2 sm:p-3 lg:rounded-xl lg:border">
           <div className="flex w-full min-w-0 flex-col gap-6">
             {viewerMode === "image" ? (
-              <MarkupOverlay page={1} {...overlayProps}>
-                <img
-                  src={previewWithRotation}
-                  alt="Envio do aluno"
-                  className="pointer-events-none block h-auto w-full max-w-full"
-                  draggable={false}
-                />
-              </MarkupOverlay>
+              imageLoadError ? (
+                <p className="alert-error">{imageLoadError}</p>
+              ) : (
+                <MarkupOverlay page={1} {...overlayProps}>
+                  <img
+                    src={previewWithRotation}
+                    alt="Envio do aluno"
+                    className="pointer-events-none block h-auto w-full max-w-full"
+                    draggable={false}
+                    onError={() =>
+                      setImageLoadError(
+                        "Não foi possível carregar a imagem do envio. Tente baixar o arquivo original.",
+                      )
+                    }
+                  />
+                </MarkupOverlay>
+              )
             ) : pdfError ? (
               <p className="alert-error">{pdfError}</p>
             ) : pdfPages === 0 ? (
@@ -390,7 +401,7 @@ export function SubmissionAnnotator({
                   <div key={page}>
                     <p className="mb-2 text-xs font-semibold text-muted">Página {page}</p>
                     <MarkupOverlay page={page} {...overlayProps}>
-                      <SubmissionPdfEmbedPage
+                      <SubmissionPdfPage
                         previewUrl={previewWithRotation}
                         page={page}
                         title={`Redação enviada — página ${page}`}

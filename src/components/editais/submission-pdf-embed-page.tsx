@@ -10,10 +10,11 @@ type SubmissionPdfEmbedPageProps = {
 /** Exibe o PDF original via visualizador nativo do navegador (iframe same-origin, compatível com CSP). */
 export function SubmissionPdfEmbedPage({ previewUrl, page, title }: SubmissionPdfEmbedPageProps) {
   const hash = `#page=${page}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+  const src = `${previewUrl.split("#")[0]}${hash}`;
 
   return (
     <iframe
-      src={`${previewUrl}${hash}`}
+      src={src}
       title={title}
       className="pointer-events-none block aspect-[210/297] w-full max-w-none border-0 bg-white"
     />

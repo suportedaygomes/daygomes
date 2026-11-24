@@ -6,6 +6,7 @@ import { getCurrentProfile } from "@/lib/auth/profile";
 import { loadCorrectionSubmissionForStaff } from "@/lib/corrector/load-correction-submission";
 import { submissionMemberProfileEmbed } from "@/lib/corrector/submission-select";
 import { getAnnotatorViewerMode } from "@/lib/submissions/access";
+import { staffMarkupPreviewUrls } from "@/lib/submissions/markup-preview-url";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -57,18 +58,14 @@ export default async function AnotarEnvioPage({
     : submission.edital_phases;
 
   const viewerMode = getAnnotatorViewerMode(submission);
+  const previewUrls = staffMarkupPreviewUrls(id, submission);
 
   return (
     <div className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] -mt-5 w-screen max-w-[100vw] px-3 pb-8 sm:-mt-8 sm:px-4 lg:px-5">
       <SubmissionAnnotator
         submissionId={id}
-        previewUrl={`/api/submissions/${id}/preview?source=original`}
-        fallbackPreviewUrl={
-          submission.preview_storage_path &&
-          submission.preview_storage_path !== submission.storage_path
-            ? `/api/submissions/${id}/preview?source=original`
-            : undefined
-        }
+        previewUrl={previewUrls.primary}
+        fallbackPreviewUrl={previewUrls.fallback}
         viewerMode={viewerMode}
         memberName={member?.full_name ?? "Aluno"}
         phaseTitle={phase?.title ?? "Tema"}

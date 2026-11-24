@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SubmissionPdfEmbedPage } from "@/components/editais/submission-pdf-embed-page";
+import { SubmissionPdfPage } from "@/components/editais/submission-pdf-page";
 import { addPreviewRotationParam, type ImageRotation } from "@/lib/markup/image-rotation";
 import {
   MARKUP_COLORS,
@@ -138,6 +138,7 @@ export function SubmissionMarkupViewer({
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = useState("");
 
   const numbered = useMemo(
     () =>
@@ -205,18 +206,27 @@ export function SubmissionMarkupViewer({
 
       <div id="correcao-imprimivel" className="flex flex-col gap-6">
         {viewerMode === "image" ? (
-          <ReadonlyOverlay
-            page={1}
-            annotations={numbered}
-            activeId={activeId}
-            onSelect={selectMarkup}
-          >
-            <img
-              src={previewWithRotation}
-              alt="Sua atividade corrigida"
-              className="block h-auto w-full"
-            />
-          </ReadonlyOverlay>
+          imageLoadError ? (
+            <p className="alert-error">{imageLoadError}</p>
+          ) : (
+            <ReadonlyOverlay
+              page={1}
+              annotations={numbered}
+              activeId={activeId}
+              onSelect={selectMarkup}
+            >
+              <img
+                src={previewWithRotation}
+                alt="Sua atividade corrigida"
+                className="block h-auto w-full"
+                onError={() =>
+                  setImageLoadError(
+                    "Não foi possível carregar a imagem da atividade. Use Baixar original ou tente de novo.",
+                  )
+                }
+              />
+            </ReadonlyOverlay>
+          )
         ) : pdfError ? (
           <p className="alert-error">{pdfError}</p>
         ) : pdfPages === 0 ? (
@@ -233,7 +243,7 @@ export function SubmissionMarkupViewer({
                   activeId={activeId}
                   onSelect={selectMarkup}
                 >
-                  <SubmissionPdfEmbedPage
+                  <SubmissionPdfPage
                     previewUrl={previewWithRotation}
                     page={page}
                     title={`Atividade corrigida — página ${page}`}

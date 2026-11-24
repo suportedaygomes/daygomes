@@ -12,19 +12,25 @@ export async function rotateDocumentBuffer(
   contentType: string,
   rotation: ImageRotation,
 ): Promise<Buffer> {
-  if (rotation === 0) return buffer;
+  if (rotation === 0 || buffer.length === 0) return buffer;
 
-  if (isPdfBytes(buffer, contentType)) {
-    const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-    for (const page of doc.getPages()) {
-      const current = page.getRotation().angle;
-      page.setRotation(degrees(current + rotation));
+  try {
+    if (isPdfBytes(buffer, contentType)) {
+      const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+      for (const page of doc.getPages()) {
+        const current = page.getRotation().angle;
+        page.setRotation(degrees(current + rotation));
+      }
+      const rotated = Buffer.from(await doc.save());
+      return rotated.length > 0 ? rotated : buffer;
     }
-    return Buffer.from(await doc.save());
-  }
 
-  if (contentType.startsWith("image/")) {
-    return sharp(buffer, { failOn: "none" }).rotate(rotation).toBuffer();
+    if (contentType.startsWith("image/")) {
+      const rotated = await sharp(buffer, { failOn: "none" }).rotate(rotation).toBuffer();
+      return rotated.length > 0 ? rotated : buffer;
+    }
+  } catch (error) {
+    console.error("[rotateDocumentBuffer] falha na rotação; servindo original", error);
   }
 
   return buffer;
