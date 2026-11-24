@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import sharp from "sharp";
+import { normalizeImageRotation } from "@/lib/markup/image-rotation";
 import { getR2ObjectStream } from "@/lib/r2/storage";
 import { getSubmissionForUser, getSubmissionPreviewPath } from "@/lib/submissions/access";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +31,34 @@ export async function GET(_request: Request, context: RouteContext) {
       ? submission.storage_path
       : getSubmissionPreviewPath(submission);
 
+  const isImage = Boolean(submission.mime_type?.startsWith("image/"));
+  let rotation = normalizeImageRotation(url.searchParams.get("r"));
+  if (isImage && !url.searchParams.has("r")) {
+    const { data: markup } = await supabase
+      .from("submission_markups")
+      .select("image_rotation")
+      .eq("submission_id", id)
+      .maybeSingle();
+    rotation = normalizeImageRotation(markup?.image_rotation);
+  }
+
+  async function respondWithBytes(raw: Buffer, contentType: string) {
+    let body = raw;
+    let outputType = contentType;
+    if (isImage && rotation !== 0) {
+      body = await sharp(raw, { failOn: "none" }).rotate(rotation).toBuffer();
+      outputType = contentType || "image/jpeg";
+    }
+    return new NextResponse(new Uint8Array(body), {
+      headers: {
+        "Content-Type": outputType,
+        "Content-Length": String(body.byteLength),
+        "Content-Disposition": "inline",
+        "Cache-Control": "private, max-age=300",
+      },
+    });
+  }
+
   if (path.startsWith("submissions/")) {
     const object = await getR2ObjectStream(path);
     if (!object.ok) {
@@ -36,18 +66,11 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const bytes = await object.body.transformToByteArray();
-    const body = Buffer.from(bytes);
-    return new NextResponse(body, {
-      headers: {
-        "Content-Type":
-          path.endsWith(".pdf") || submission.mime_type === "application/pdf"
-            ? "application/pdf"
-            : submission.mime_type ?? object.contentType,
-        "Content-Length": String(body.byteLength),
-        "Content-Disposition": "inline",
-        "Cache-Control": "private, max-age=300",
-      },
-    });
+  const contentType =
+      path.endsWith(".pdf") || submission.mime_type === "application/pdf"
+        ? "application/pdf"
+        : submission.mime_type ?? object.contentType;
+    return respondWithBytes(Buffer.from(bytes), contentType);
   }
 
   const { data, error } = await supabase.storage.from("submissions").download(path);
@@ -56,10 +79,9 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Arquivo indisponível." }, { status: 404 });
   }
 
-  return new NextResponse(data.stream(), {
-    headers: {
-      "Content-Type": submission.mime_type ?? "application/octet-stream",
-      "Cache-Control": "private, max-age=300",
-    },
-  });
+  const arrayBuffer = await data.arrayBuffer();
+  return respondWithBytes(
+    Buffer.from(arrayBuffer),
+    submission.mime_type ?? "application/octet-stream",
+  );
 }

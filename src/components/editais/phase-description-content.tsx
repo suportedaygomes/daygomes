@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo } from "react";
 import { normalizePhaseDescriptionForDisplay } from "@/lib/rich-text/phase-description";
 
 type Props = {
@@ -6,7 +9,7 @@ type Props = {
 };
 
 export function PhaseDescriptionContent({ html, className = "" }: Props) {
-  const safe = normalizePhaseDescriptionForDisplay(html);
+  const safe = useMemo(() => normalizePhaseDescriptionForDisplay(html), [html]);
   if (!safe) return null;
 
   return (

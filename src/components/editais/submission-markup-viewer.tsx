@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SubmissionPdfEmbedPage } from "@/components/editais/submission-pdf-embed-page";
+import { addPreviewRotationParam, type ImageRotation } from "@/lib/markup/image-rotation";
 import {
   MARKUP_COLORS,
   type MarkupAnnotation,
@@ -14,6 +15,7 @@ type SubmissionMarkupViewerProps = {
   previewUrl: string;
   viewerMode: "image" | "pdf";
   annotations: MarkupAnnotation[];
+  imageRotation?: ImageRotation;
 };
 
 function scrollToMarkup(id: string) {
@@ -130,7 +132,9 @@ export function SubmissionMarkupViewer({
   previewUrl,
   viewerMode,
   annotations,
+  imageRotation = 0,
 }: SubmissionMarkupViewerProps) {
+  const imagePreviewUrl = addPreviewRotationParam(previewUrl, imageRotation);
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -208,7 +212,7 @@ export function SubmissionMarkupViewer({
             onSelect={selectMarkup}
           >
             <img
-              src={previewUrl}
+              src={imagePreviewUrl}
               alt="Sua atividade corrigida"
               className="block h-auto w-full"
             />

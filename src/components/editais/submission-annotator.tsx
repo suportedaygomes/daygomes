@@ -7,6 +7,12 @@ import { SubmissionPdfEmbedPage } from "@/components/editais/submission-pdf-embe
 import { PhaseDescriptionContent } from "@/components/editais/phase-description-content";
 import { isPhaseDescriptionEmpty } from "@/lib/rich-text/phase-description-plain";
 import {
+  addPreviewRotationParam,
+  normalizeImageRotation,
+  rotateMarkupAnnotations,
+  type ImageRotation,
+} from "@/lib/markup/image-rotation";
+import {
   type MarkupAnnotation,
   type MarkupColorId,
   markupColorRgba,
@@ -137,6 +143,9 @@ export function SubmissionAnnotator({
   const [pdfPages, setPdfPages] = useState(0);
   const [pdfError, setPdfError] = useState("");
   const [activePreviewUrl, setActivePreviewUrl] = useState(previewUrl);
+  const [imageRotation, setImageRotation] = useState<ImageRotation>(0);
+
+  const imagePreviewUrl = addPreviewRotationParam(activePreviewUrl, imageRotation);
 
   useEffect(() => {
     setActivePreviewUrl(previewUrl);
@@ -148,8 +157,12 @@ export function SubmissionAnnotator({
     void (async () => {
       const response = await fetch(`/api/submissions/${submissionId}/markups`);
       if (!response.ok) return;
-      const data = (await response.json()) as { annotations?: MarkupAnnotation[] };
+      const data = (await response.json()) as {
+        annotations?: MarkupAnnotation[];
+        imageRotation?: unknown;
+      };
       setAnnotations(data.annotations ?? []);
+      setImageRotation(normalizeImageRotation(data.imageRotation));
       setLoaded(true);
     })();
   }, [submissionId]);
@@ -273,6 +286,11 @@ export function SubmissionAnnotator({
     setActiveId(id);
   }
 
+  function rotateImage(delta: 90 | -90) {
+    setImageRotation((current) => normalizeImageRotation(current + delta));
+    setAnnotations((current) => rotateMarkupAnnotations(current, delta));
+  }
+
   async function saveMarkups() {
     setError("");
     setMessage("");
@@ -280,7 +298,7 @@ export function SubmissionAnnotator({
     const response = await fetch(`/api/submissions/${submissionId}/markups`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ annotations }),
+      body: JSON.stringify({ annotations, imageRotation }),
     });
     if (!response.ok) {
       setError("Não foi possível salvar as marcações.");
@@ -343,6 +361,9 @@ export function SubmissionAnnotator({
           pending={pending}
           onColorChange={setColor}
           onSave={saveMarkups}
+          showImageRotate={viewerMode === "image"}
+          onRotateLeft={() => rotateImage(-90)}
+          onRotateRight={() => rotateImage(90)}
         />
       </div>
 
@@ -352,7 +373,7 @@ export function SubmissionAnnotator({
             {viewerMode === "image" ? (
               <MarkupOverlay page={1} {...overlayProps}>
                 <img
-                  src={activePreviewUrl}
+                  src={imagePreviewUrl}
                   alt="Envio do aluno"
                   className="pointer-events-none block h-auto w-full max-w-full"
                   draggable={false}

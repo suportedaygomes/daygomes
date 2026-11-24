@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeImageRotation } from "@/lib/markup/image-rotation";
 import type { MarkupAnnotation } from "@/lib/markup/types";
 import { getSubmissionForUser } from "@/lib/submissions/access";
 import { createClient } from "@/lib/supabase/server";
@@ -33,12 +34,13 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const { data } = await supabase
     .from("submission_markups")
-    .select("annotations")
+    .select("annotations, image_rotation")
     .eq("submission_id", id)
     .maybeSingle();
 
   return NextResponse.json({
     annotations: parseAnnotations(data?.annotations),
+    imageRotation: normalizeImageRotation(data?.image_rotation),
   });
 }
 
@@ -63,14 +65,19 @@ export async function PUT(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
   }
 
-  const body = (await request.json()) as { annotations?: MarkupAnnotation[] };
+  const body = (await request.json()) as {
+    annotations?: MarkupAnnotation[];
+    imageRotation?: unknown;
+  };
   const annotations = parseAnnotations(body.annotations);
+  const imageRotation = normalizeImageRotation(body.imageRotation);
 
   const { error } = await supabase.from("submission_markups").upsert(
     {
       submission_id: id,
       corrector_id: user.id,
       annotations,
+      image_rotation: imageRotation,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "submission_id" },

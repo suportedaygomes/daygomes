@@ -262,6 +262,8 @@ export async function POST(request: Request) {
       await deleteR2Object(previousPreview).catch(() => undefined);
     }
 
+    await admin.from("submission_markups").delete().eq("submission_id", existing.id);
+
     return NextResponse.json({ ok: true, message: "Atividade reenviada com sucesso." });
   }
 

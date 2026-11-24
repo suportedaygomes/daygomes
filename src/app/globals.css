@@ -539,9 +539,37 @@ html:not([data-theme="light"]) .text-action-danger:hover {
   }
 }
 
-.phase-description-prose p,
-.phase-description-prose div {
+.phase-description-prose {
   text-align: left;
+}
+
+.phase-description-prose div {
+  margin: 0 0 0.4rem;
+}
+
+.phase-description-prose div:last-child {
+  margin-bottom: 0;
+}
+
+.phase-description-prose p[style*="text-align: center"],
+.phase-description-prose div[style*="text-align: center"],
+.phase-description-prose p[style*="text-align:center"],
+.phase-description-prose div[style*="text-align:center"] {
+  text-align: center;
+}
+
+.phase-description-prose p[style*="text-align: right"],
+.phase-description-prose div[style*="text-align: right"],
+.phase-description-prose p[style*="text-align:right"],
+.phase-description-prose div[style*="text-align:right"] {
+  text-align: right;
+}
+
+.phase-description-prose p[style*="text-align: justify"],
+.phase-description-prose div[style*="text-align: justify"],
+.phase-description-prose p[style*="text-align:justify"],
+.phase-description-prose div[style*="text-align:justify"] {
+  text-align: justify;
 }
 
 .phase-description-prose p[align="center"],
@@ -637,6 +665,27 @@ html[data-theme="light"] .phase-description-prose b {
 .phase-description-prose u {
   text-decoration: underline;
   text-underline-offset: 0.12em;
+}
+
+.phase-description-prose h3 {
+  margin: 0.5rem 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.phase-description-prose h4 {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.phase-description-prose blockquote {
+  margin: 0.5rem 0;
+  border-left: 3px solid rgb(168 85 247 / 0.55);
+  padding-left: 0.75rem;
+  color: var(--foreground);
 }
 
 .phase-description-editor {

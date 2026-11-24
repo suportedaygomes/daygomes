@@ -6,6 +6,7 @@ import { SubmissionMarkupViewer } from "@/components/editais/submission-markup-v
 import { getCurrentProfile } from "@/lib/auth/profile";
 import { parseSubmissionGrade } from "@/lib/editais/grades";
 import { themeLabel } from "@/lib/editais/theme-label";
+import { normalizeImageRotation } from "@/lib/markup/image-rotation";
 import type { MarkupAnnotation } from "@/lib/markup/types";
 import { getAnnotatorViewerMode } from "@/lib/submissions/access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -58,7 +59,7 @@ export default async function MembroCorrecaoDetalhePage({
 
   const { data: markups } = await supabase
     .from("submission_markups")
-    .select("annotations")
+    .select("annotations, image_rotation")
     .eq("submission_id", id)
     .maybeSingle();
 
@@ -68,6 +69,7 @@ export default async function MembroCorrecaoDetalhePage({
 
   const viewerMode = getAnnotatorViewerMode(submission);
   const annotations = parseAnnotations(markups?.annotations);
+  const imageRotation = normalizeImageRotation(markups?.image_rotation);
 
   return (
     <PainelPage>
@@ -98,6 +100,7 @@ export default async function MembroCorrecaoDetalhePage({
         previewUrl={`/api/submissions/${id}/preview`}
         viewerMode={viewerMode}
         annotations={annotations}
+        imageRotation={imageRotation}
       />
     </PainelPage>
   );

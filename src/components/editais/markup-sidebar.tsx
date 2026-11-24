@@ -24,6 +24,9 @@ type MarkupToolbarProps = {
   onColorChange: (color: MarkupColorId) => void;
   onSave: () => void;
   layout?: "default" | "strip";
+  showImageRotate?: boolean;
+  onRotateLeft?: () => void;
+  onRotateRight?: () => void;
 };
 
 export function MarkupToolbar({
@@ -32,6 +35,9 @@ export function MarkupToolbar({
   onColorChange,
   onSave,
   layout = "default",
+  showImageRotate = false,
+  onRotateLeft,
+  onRotateRight,
 }: MarkupToolbarProps) {
   const colorButtons = MARKUP_COLORS.map((item) => (
     <button
@@ -66,6 +72,28 @@ export function MarkupToolbar({
     </button>
   );
 
+  const rotateButtons =
+    showImageRotate && onRotateLeft && onRotateRight ? (
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
+        <button
+          type="button"
+          className="btn-secondary h-10 px-2.5 text-xs"
+          disabled={pending}
+          onClick={onRotateLeft}
+        >
+          Girar ↺
+        </button>
+        <button
+          type="button"
+          className="btn-secondary h-10 px-2.5 text-xs"
+          disabled={pending}
+          onClick={onRotateRight}
+        >
+          Girar ↻
+        </button>
+      </div>
+    ) : null;
+
   if (layout === "strip") {
     return (
       <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-3 py-2.5">
@@ -73,6 +101,7 @@ export function MarkupToolbar({
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2">
           {colorButtons}
         </div>
+        {rotateButtons}
         {saveButton}
       </div>
     );

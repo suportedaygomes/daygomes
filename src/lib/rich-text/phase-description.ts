@@ -20,12 +20,63 @@ const ALLOWED_TAGS = [
   "li",
   "span",
   "div",
+  "h3",
+  "h4",
+  "blockquote",
 ];
 
 const PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   ALLOWED_TAGS,
   ALLOWED_ATTR: ["style", "type", "class", "align"],
 };
+
+const TEXT_ALIGN_VALUES = new Set(["left", "center", "right", "justify", "start", "end"]);
+
+function normalizeTextAlignValue(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (value === "start" || value === "-webkit-left") return "left";
+  if (value === "end" || value === "-webkit-right") return "right";
+  if (value === "-webkit-center") return "center";
+  if (TEXT_ALIGN_VALUES.has(value)) return value === "start" ? "left" : value === "end" ? "right" : value;
+  return null;
+}
+
+function isAllowedStyleDeclaration(part: string): boolean {
+  const normalized = part.trim().toLowerCase();
+  if (/^text-align:\s*.+$/i.test(normalized)) {
+    const align = normalized.replace(/^text-align:\s*/i, "");
+    return normalizeTextAlignValue(align) !== null;
+  }
+  if (/^white-space:\s*pre-wrap$/i.test(normalized)) return true;
+  if (/^font-weight:\s*(bold|bolder|[5-9]00|normal)$/i.test(normalized)) return true;
+  if (/^font-style:\s*(italic|normal)$/i.test(normalized)) return true;
+  if (
+    /^text-decoration:\s*(underline|line-through|none)$/i.test(normalized) ||
+    /^text-decoration-line:\s*(underline|line-through|none)$/i.test(normalized)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function normalizeStyleAttribute(value: string): string | null {
+  const parts = value
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const safeParts: string[] = [];
+  for (const part of parts) {
+    if (!isAllowedStyleDeclaration(part)) continue;
+  if (/^text-align:/i.test(part)) {
+      const align = part.replace(/^text-align:\s*/i, "");
+      const fixed = normalizeTextAlignValue(align);
+      if (fixed) safeParts.push(`text-align: ${fixed}`);
+      continue;
+    }
+    safeParts.push(part);
+  }
+  return safeParts.length ? safeParts.join("; ") : null;
+}
 
 let hooksRegistered = false;
 
@@ -54,22 +105,12 @@ function ensureSanitizeHooks() {
     }
 
     if (data.attrName !== "style") return;
-    const value = data.attrValue ?? "";
-    const parts = value
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean);
-    const safeParts = parts.filter(
-      (part) =>
-        /^text-align:\s*(left|center|right|justify)$/i.test(part) ||
-        /^white-space:\s*pre-wrap$/i.test(part) ||
-        /^font-weight:\s*(bold|[5-9]00)$/i.test(part),
-    );
-    if (!safeParts.length) {
+    const normalized = normalizeStyleAttribute(data.attrValue ?? "");
+    if (!normalized) {
       data.keepAttr = false;
       return;
     }
-    data.attrValue = safeParts.join("; ");
+    data.attrValue = normalized;
   });
 }
 

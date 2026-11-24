@@ -282,6 +282,15 @@ export function PhaseDescriptionEditor({
 
   function onPaste(event: React.ClipboardEvent) {
     event.preventDefault();
+    const rich = event.clipboardData.getData("text/html");
+    if (rich.trim()) {
+      const safe = sanitizePhaseDescriptionHtml(rich);
+      if (safe.trim()) {
+        document.execCommand("insertHTML", false, safe);
+        emitHtml();
+        return;
+      }
+    }
     const text = event.clipboardData.getData("text/plain");
     document.execCommand("insertText", false, text);
     emitHtml();
